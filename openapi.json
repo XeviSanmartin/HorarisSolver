@@ -1,0 +1,1051 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API Solver d'horaris Switch2",
+    "description": "\nServei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).\n\n## Flux\n\n1. **`POST /api/validate`** — valida el JSON d'entrada (ràpid, sense resoldre).\n2. **`POST /api/solve`** — preprocessa, construeix el model CP-SAT i resol.\n3. Opcionalment, **`POST /api/preprocess`** per inspeccionar el JSON intermedi (debug).\n\n## Format d'entrada\n\nEl camp `dades` de totes les peticions és el contingut complet d'un fitxer\n**`Solver.json`** de l'editor Switch2: professors (amb desiderata i assignacions\nde mòduls), catàleg de mòduls, cursos, aules, especialitats i restriccions\nopcionals (mòduls coordinats, projectes). Cada camp està descrit a l'apartat\n**Schemas** d'aquesta especificació.\n\nConvencions temporals: `dia` 0–4 (dilluns–divendres), `hora` 0–12 (08:00–20:00;\nel solver només programa les hores 0–10), `subgrup` 1 (1r mig grup), 2 (2n mig\ngrup) o 3 (grup sencer).\n\n## Estats del resultat de `/api/solve`\n\n| `estat` | Significat | `solucio` |\n|---|---|---|\n| `OPTIMAL` | Solució òptima demostrada | present |\n| `FEASIBLE` | Solució vàlida dins del temps límit (pot no ser òptima) | present |\n| `INFEASIBLE` | Les restriccions es contradiuen: cap horari possible | absent |\n| `UNKNOWN` | Temps esgotat sense conclusió: reintenteu amb més temps | absent |\n| `MODEL_INVALID` | Error intern construint el model | absent |\n\n`INFEASIBLE` i `UNKNOWN` **no** són errors HTTP: retornen `200`.\n\n## Funció objectiu\n\nEl solver minimitza `10 × hores_mortes + 20 × preferències_no_respectades`\n(desiderata `tipus: 1`). El valor final és a `solucio.stats.objectiu`.\n",
+    "contact": {
+      "name": "HorarisSolver",
+      "url": "https://github.com/XeviSanmartin/HorarisSolver"
+    },
+    "version": "1.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Servei"
+        ],
+        "summary": "Estat del servei",
+        "description": "Comprova que el servei i OR-Tools estan operatius.\n\nRetorna també `max_temps_solver`, el límit dur que el servidor aplica a\n`opcions.max_time_seconds` de `/api/solve`.",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaHealth"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/validate": {
+      "post": {
+        "tags": [
+          "Validació"
+        ],
+        "summary": "Valida un Solver.json sense resoldre",
+        "description": "Carrega les dades, executa les validacions i retorna advertiments i estadístiques.\n\nNo construeix ni resol el model: triga mil·lisegons i serveix per detectar\nproblemes abans de llançar una resolució. Els `advertiments` són informatius\ni **no** impedeixen cridar `/api/solve`.",
+        "operationId": "validate_api_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticioValidate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaValidate"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "El cos de la petició no compleix l'esquema (error Pydantic estàndard) o les dades tenen una incoherència estructural profunda (cos `DetallError`)."
+          }
+        }
+      }
+    },
+    "/api/preprocess": {
+      "post": {
+        "tags": [
+          "Validació"
+        ],
+        "summary": "Retorna les dades preprocessades (debug)",
+        "description": "Retorna el JSON intermedi (`dades_solver_processades`) que consumeix el solver.\n\nÚtil per depurar què ha entès el preprocessador: mòduls especials detectats\n(FOL, anglès, sostenibilitat, digitalització), tutories, agrupacions\nfusionables i subgrups per curs.",
+        "operationId": "preprocess_api_preprocess_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticioValidate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaPreprocess"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "El cos de la petició no compleix l'esquema (error Pydantic estàndard) o les dades tenen una incoherència estructural profunda (cos `DetallError`)."
+          }
+        }
+      }
+    },
+    "/api/solve": {
+      "post": {
+        "tags": [
+          "Resolució"
+        ],
+        "summary": "Resol l'horari",
+        "description": "Executa el pipeline complet: preprocessament → model CP-SAT → solució.\n\nInterpreteu el camp `estat` de la resposta (vegeu la descripció general de\nl'API). Amb dades reals d'un centre, un `max_time_seconds` de 60–120 s sol\ndonar una solució `FEASIBLE`; si rebeu `UNKNOWN`, reintenteu amb més temps.",
+        "operationId": "solve_api_solve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticioSolve"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaSolve"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "El cos de la petició no compleix l'esquema (error Pydantic estàndard) o les dades tenen una incoherència estructural profunda (cos `DetallError`)."
+          },
+          "500": {
+            "description": "Error intern construint o resolent el model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetallError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Aula": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Identificador únic. Els índexs poden no ser correlatius: refereu-vos sempre a aquest camp."
+          },
+          "actiu": {
+            "type": "boolean",
+            "title": "Actiu",
+            "description": "Si és fals, el solver l'ignora.",
+            "default": true
+          },
+          "nom": {
+            "type": "string",
+            "title": "Nom",
+            "description": "Nom per mostrar."
+          },
+          "nomes_subgrups": {
+            "type": "boolean",
+            "title": "Nomes Subgrups",
+            "description": "Si és cert, no admet classes de grup sencer (subgrup 3).",
+            "default": false
+          },
+          "nomes_tardes": {
+            "type": "boolean",
+            "title": "Nomes Tardes",
+            "description": "Si és cert, només disponible de l'hora 6 (14:00) en endavant.",
+            "default": false
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "index",
+          "nom"
+        ],
+        "title": "Aula",
+        "description": "Aula del centre."
+      },
+      "Curs": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Identificador únic del curs."
+          },
+          "actiu": {
+            "type": "boolean",
+            "title": "Actiu",
+            "description": "Si és fals, el solver l'ignora.",
+            "default": true
+          },
+          "nom": {
+            "type": "string",
+            "title": "Nom",
+            "description": "Nom del curs (p. ex. \"ASIX1\")."
+          },
+          "color": {
+            "items": {},
+            "type": "array",
+            "title": "Color",
+            "description": "[R, G, B] 0–255, per a la UI."
+          },
+          "aula": {
+            "type": "integer",
+            "title": "Aula",
+            "description": "Índex de l'aula principal (`aules[].index`).",
+            "default": -1
+          },
+          "horari_disponible": {
+            "items": {
+              "$ref": "#/components/schemas/SlotHorari"
+            },
+            "type": "array",
+            "title": "Horari Disponible",
+            "description": "Si és buit, el curs pot tenir classe a qualsevol hora. Si té elements, NOMÉS als slots indicats."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "index",
+          "nom"
+        ],
+        "title": "Curs",
+        "description": "Grup d'alumnes (curs)."
+      },
+      "DadesSolver": {
+        "properties": {
+          "professors": {
+            "items": {
+              "$ref": "#/components/schemas/Professor"
+            },
+            "type": "array",
+            "title": "Professors"
+          },
+          "moduls": {
+            "items": {
+              "$ref": "#/components/schemas/ModulCataleg"
+            },
+            "type": "array",
+            "title": "Moduls",
+            "description": "Catàleg de mòduls."
+          },
+          "cursos": {
+            "items": {
+              "$ref": "#/components/schemas/Curs"
+            },
+            "type": "array",
+            "title": "Cursos"
+          },
+          "aules": {
+            "items": {
+              "$ref": "#/components/schemas/Aula"
+            },
+            "type": "array",
+            "title": "Aules"
+          },
+          "especialitats": {
+            "items": {
+              "$ref": "#/components/schemas/Especialitat"
+            },
+            "type": "array",
+            "title": "Especialitats"
+          },
+          "moduls_coordinats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModulsCoordinats"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Grups de mòduls que han d'anar a la mateixa hora."
+          },
+          "projectes": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Projectes",
+            "description": "Índexs de mòduls de projecte final: només poden anar als slots de `horaris_projectes`."
+          },
+          "horaris_projectes": {
+            "items": {
+              "$ref": "#/components/schemas/SlotHorari"
+            },
+            "type": "array",
+            "title": "Horaris Projectes",
+            "description": "Slots permesos per als mòduls de projecte."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "DadesSolver",
+        "description": "Contingut complet d'un fitxer Solver.json de l'editor Switch2.",
+        "example": {
+          "aules": [
+            {
+              "actiu": true,
+              "index": 7,
+              "nom": "Aula 3.10"
+            }
+          ],
+          "cursos": [
+            {
+              "actiu": true,
+              "aula": 1,
+              "index": 6,
+              "nom": "DAW2"
+            }
+          ],
+          "especialitats": [
+            {
+              "actiu": true,
+              "codi": "627",
+              "index": 1,
+              "nom": "Sistemes i aplicacions informàtiques"
+            }
+          ],
+          "horaris_projectes": [
+            {
+              "dia": 3,
+              "hora": 8
+            }
+          ],
+          "moduls": [
+            {
+              "codi": "M6-0612",
+              "curs": 6,
+              "especialitat": 1,
+              "index": 27,
+              "nom": "Desenvolupament entorn client"
+            }
+          ],
+          "moduls_coordinats": {
+            "grups": [
+              {
+                "moduls": [
+                  5,
+                  12,
+                  19
+                ],
+                "nom": "FOL DAMW"
+              }
+            ]
+          },
+          "professors": [
+            {
+              "7hores": false,
+              "DiesLliures": false,
+              "actiu": true,
+              "controlable": true,
+              "desiderata": [
+                {
+                  "dia": 1,
+                  "hora": 5,
+                  "tipus": 2
+                }
+              ],
+              "especialitat": 0,
+              "index": 0,
+              "moduls": [
+                {
+                  "aula": 7,
+                  "hores": 2,
+                  "index": 27,
+                  "subgrup": 3
+                }
+              ],
+              "nom": "Artur Juvé",
+              "nomCurt": "Artur",
+              "tutorCurs": 2
+            }
+          ],
+          "projectes": [
+            37
+          ]
+        }
+      },
+      "Desiderata": {
+        "properties": {
+          "dia": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Dia",
+            "description": "0=dilluns … 4=divendres."
+          },
+          "hora": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 0.0,
+            "title": "Hora",
+            "description": "0=08:00 … 12=20:00. El solver només programa les hores 0–10."
+          },
+          "tipus": {
+            "type": "integer",
+            "maximum": 2.0,
+            "minimum": 1.0,
+            "title": "Tipus",
+            "description": "1 = prefereix que no (soft), 2 = NO disponible (hard)."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "dia",
+          "hora",
+          "tipus"
+        ],
+        "title": "Desiderata",
+        "description": "Preferència horària d'un professor."
+      },
+      "DetallError": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error",
+            "description": "Descripció general del problema."
+          },
+          "detall": {
+            "type": "string",
+            "title": "Detall",
+            "description": "Excepció concreta (tipus i missatge)."
+          },
+          "traca": {
+            "type": "string",
+            "title": "Traca",
+            "description": "Traça reduïda per a depuració."
+          }
+        },
+        "type": "object",
+        "required": [
+          "error",
+          "detall",
+          "traca"
+        ],
+        "title": "DetallError",
+        "description": "Cos del camp `detail` en errors 422 (dades) i 500."
+      },
+      "Especialitat": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "actiu": {
+            "type": "boolean",
+            "title": "Actiu",
+            "default": true
+          },
+          "codi": {
+            "type": "string",
+            "title": "Codi",
+            "description": "Codi oficial (p. ex. \"507\")."
+          },
+          "nom": {
+            "type": "string",
+            "title": "Nom"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "index",
+          "codi",
+          "nom"
+        ],
+        "title": "Especialitat",
+        "description": "Especialitat docent."
+      },
+      "GrupCoordinat": {
+        "properties": {
+          "nom": {
+            "type": "string",
+            "title": "Nom",
+            "description": "Nom descriptiu del grup.",
+            "default": ""
+          },
+          "moduls": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Moduls",
+            "description": "Índexs dels mòduls coordinats."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "GrupCoordinat",
+        "description": "Grup de mòduls que han d'impartir-se exactament a la mateixa hora."
+      },
+      "ModulCataleg": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Identificador únic del mòdul."
+          },
+          "codi": {
+            "type": "string",
+            "title": "Codi",
+            "description": "Codi oficial. Prefixos especials: `AN-` (anglès), `SO-` (sostenibilitat), `DI-` (digitalització), `TUTORIA`.",
+            "default": ""
+          },
+          "nom": {
+            "type": "string",
+            "title": "Nom",
+            "description": "Nom complet. Es detecten automàticament: 'tutoria', 'anglès', 'FOL', 'sostenibilitat', 'digitalització'.",
+            "default": ""
+          },
+          "curs": {
+            "type": "integer",
+            "title": "Curs",
+            "description": "Índex del curs a `cursos[]`.",
+            "default": -1
+          },
+          "especialitat": {
+            "type": "integer",
+            "title": "Especialitat",
+            "description": "Índex a `especialitats[]` (2 = FOL, 3 = anglès).",
+            "default": -1
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "index"
+        ],
+        "title": "ModulCataleg",
+        "description": "Entrada del catàleg de mòduls (les hores i professors van a `professors[].moduls`)."
+      },
+      "ModulProfessor": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Índex del mòdul al catàleg `moduls[]` (camp `index`)."
+          },
+          "hores": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Hores",
+            "description": "Hores setmanals a programar.",
+            "default": 0
+          },
+          "aula": {
+            "type": "integer",
+            "title": "Aula",
+            "description": "Índex de l'aula preferida (`aules[].index`). -1 = qualsevol.",
+            "default": -1
+          },
+          "subgrup": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Subgrup",
+            "description": "1 = 1r mig grup, 2 = 2n mig grup, 3 = grup sencer.",
+            "default": 3
+          },
+          "suport": {
+            "type": "boolean",
+            "title": "Suport",
+            "description": "És professor de suport (assisteix un altre professor).",
+            "default": false
+          },
+          "simultani": {
+            "type": "boolean",
+            "title": "Simultani",
+            "description": "La classe ha de coincidir en hora i aula amb una altra del mateix mòdul.",
+            "default": false
+          },
+          "particio": {
+            "items": {},
+            "type": "array",
+            "title": "Particio",
+            "description": "(Experimental) Preferències de distribució d'hores en blocs."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "index"
+        ],
+        "title": "ModulProfessor",
+        "description": "Assignació d'un mòdul a un professor: quantes hores i en quines condicions."
+      },
+      "ModulsCoordinats": {
+        "properties": {
+          "grups": {
+            "items": {
+              "$ref": "#/components/schemas/GrupCoordinat"
+            },
+            "type": "array",
+            "title": "Grups"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "ModulsCoordinats"
+      },
+      "OpcionsSolve": {
+        "properties": {
+          "max_time_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Max Time Seconds",
+            "description": "Límit de temps de cerca en segons. El servidor l'acota al valor `max_temps_solver` que informa `GET /api/health`.",
+            "default": 60
+          },
+          "num_workers": {
+            "type": "integer",
+            "maximum": 16.0,
+            "minimum": 1.0,
+            "title": "Num Workers",
+            "description": "Threads de cerca paral·lela de CP-SAT.",
+            "default": 4
+          },
+          "incloure_compatible": {
+            "type": "boolean",
+            "title": "Incloure Compatible",
+            "description": "Si és cert, la resposta inclou `solucio_compatible`: la solució en format Solver.json, reimportable a l'editor Switch2.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "OpcionsSolve",
+        "description": "Opcions d'execució del solver."
+      },
+      "PeticioSolve": {
+        "properties": {
+          "dades": {
+            "$ref": "#/components/schemas/DadesSolver"
+          },
+          "opcions": {
+            "$ref": "#/components/schemas/OpcionsSolve"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dades"
+        ],
+        "title": "PeticioSolve",
+        "description": "Cos de la petició de /api/solve."
+      },
+      "PeticioValidate": {
+        "properties": {
+          "dades": {
+            "$ref": "#/components/schemas/DadesSolver"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dades"
+        ],
+        "title": "PeticioValidate",
+        "description": "Cos de la petició de /api/validate i /api/preprocess."
+      },
+      "Professor": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Identificador únic del professor."
+          },
+          "actiu": {
+            "type": "boolean",
+            "title": "Actiu",
+            "description": "Si és fals, el solver l'ignora.",
+            "default": true
+          },
+          "nom": {
+            "type": "string",
+            "title": "Nom",
+            "description": "Nom complet."
+          },
+          "nomCurt": {
+            "type": "string",
+            "title": "Nomcurt",
+            "description": "Nom curt per mostrar a l'horari."
+          },
+          "especialitat": {
+            "type": "integer",
+            "title": "Especialitat",
+            "description": "Índex a `especialitats[]`."
+          },
+          "comentaris": {
+            "type": "string",
+            "title": "Comentaris",
+            "default": ""
+          },
+          "tutorCurs": {
+            "type": "integer",
+            "title": "Tutorcurs",
+            "description": "Índex del curs del qual és tutor (-1 si no n'és).",
+            "default": -1
+          },
+          "7hores": {
+            "type": "boolean",
+            "title": "7Hores",
+            "description": "Pot fer fins a 7 hores en un dia (per defecte, màxim 6).",
+            "default": false
+          },
+          "DiesLliures": {
+            "type": "boolean",
+            "title": "Dieslliures",
+            "description": "Pot tenir fins a 1 dia lliure entre dimarts i dijous.",
+            "default": false
+          },
+          "controlable": {
+            "type": "boolean",
+            "title": "Controlable",
+            "description": "Si és fals, no s'apliquen les restriccions de dies lliures ni de dilluns/divendres.",
+            "default": false
+          },
+          "desiderata": {
+            "items": {
+              "$ref": "#/components/schemas/Desiderata"
+            },
+            "type": "array",
+            "title": "Desiderata"
+          },
+          "moduls": {
+            "items": {
+              "$ref": "#/components/schemas/ModulProfessor"
+            },
+            "type": "array",
+            "title": "Moduls"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "index",
+          "nom",
+          "nomCurt",
+          "especialitat"
+        ],
+        "title": "Professor",
+        "description": "Professor amb les seves preferències i assignacions."
+      },
+      "RespostaHealth": {
+        "properties": {
+          "estat": {
+            "type": "string",
+            "title": "Estat",
+            "examples": [
+              "ok"
+            ]
+          },
+          "versio_api": {
+            "type": "string",
+            "title": "Versio Api",
+            "examples": [
+              "1.1.0"
+            ]
+          },
+          "max_temps_solver": {
+            "type": "number",
+            "title": "Max Temps Solver",
+            "description": "Límit dur (segons) aplicat a `opcions.max_time_seconds` de /api/solve.",
+            "examples": [
+              280.0
+            ]
+          },
+          "python": {
+            "type": "string",
+            "title": "Python",
+            "examples": [
+              "3.12.13"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "estat",
+          "versio_api",
+          "max_temps_solver",
+          "python"
+        ],
+        "title": "RespostaHealth"
+      },
+      "RespostaPreprocess": {
+        "properties": {
+          "dades_processades": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Dades Processades",
+            "description": "JSON intermedi que consumeix el solver: professors amb restriccions normalitzades, mòduls amb marques `es_fol`/`es_angles`/…, cursos amb subgrups i tutor, agrupacions i configuració global."
+          },
+          "advertiments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Advertiments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dades_processades",
+          "advertiments"
+        ],
+        "title": "RespostaPreprocess"
+      },
+      "RespostaSolve": {
+        "properties": {
+          "estat": {
+            "type": "string",
+            "title": "Estat",
+            "description": "Resultat de la resolució: 'OPTIMAL', 'FEASIBLE', 'INFEASIBLE', 'UNKNOWN' o 'MODEL_INVALID'.",
+            "examples": [
+              "FEASIBLE"
+            ]
+          },
+          "solucio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Solucio"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present només si l'estat és OPTIMAL o FEASIBLE."
+          },
+          "solucio_compatible": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solucio Compatible",
+            "description": "Solució en format Solver.json, reimportable a l'editor (present només si s'ha demanat amb `opcions.incloure_compatible`)."
+          },
+          "advertiments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Advertiments",
+            "description": "Advertiments del validador de dades (informatius)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "estat"
+        ],
+        "title": "RespostaSolve"
+      },
+      "RespostaValidate": {
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "title": "Valid",
+            "description": "Cert si no hi ha cap advertiment."
+          },
+          "advertiments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Advertiments",
+            "description": "Incoherències detectades. NO bloquegen /api/solve.",
+            "examples": [
+              [
+                "Mòdul Repàs no té cap professor assignat",
+                "Cursos sense tutoria: DAMW D"
+              ]
+            ]
+          },
+          "estadistiques": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Estadistiques",
+            "description": "Recompte d'entitats i mòduls especials detectats.",
+            "examples": [
+              {
+                "moduls_angles": 4,
+                "moduls_digitalizacio": 3,
+                "moduls_fol": 5,
+                "moduls_simultaneos": 2,
+                "moduls_sostenibilitat": 3,
+                "moduls_suport": 0,
+                "subgrups_per_curs": {
+                  "0": [
+                    1,
+                    2,
+                    3
+                  ]
+                },
+                "total_aules": 8,
+                "total_cursos": 9,
+                "total_moduls": 76,
+                "total_professors": 18,
+                "tutories": 9
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "valid",
+          "advertiments",
+          "estadistiques"
+        ],
+        "title": "RespostaValidate"
+      },
+      "SlotHorari": {
+        "properties": {
+          "dia": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Dia"
+          },
+          "hora": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 0.0,
+            "title": "Hora"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "dia",
+          "hora"
+        ],
+        "title": "SlotHorari",
+        "description": "Franja horària concreta."
+      },
+      "Solucio": {
+        "properties": {
+          "horari": {
+            "items": {},
+            "type": "array",
+            "title": "Horari",
+            "description": "Vista per curs: `horari[curs][dia][hora]` → llista de classes (0 = lliure, 1 = classe, 2 = desdoblament de subgrups). Cada classe: `{modul, modul_index, professor, professor_index, aula, aula_index, subgrup}`."
+          },
+          "professors": {
+            "items": {},
+            "type": "array",
+            "title": "Professors",
+            "description": "Vista per professor: `professors[professor_index][dia][hora]` → llista de classes `{modul, modul_index, curs, curs_index, aula, aula_index, subgrup}`."
+          },
+          "aules": {
+            "items": {},
+            "type": "array",
+            "title": "Aules",
+            "description": "Vista per aula (indexada per posició, no per `aula_index`): `aules[pos][dia][hora]` → llista de classes `{modul, modul_index, professor, professor_index, curs, curs_index, subgrup}`."
+          },
+          "stats": {
+            "$ref": "#/components/schemas/StatsSolucio"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "horari",
+          "professors",
+          "aules",
+          "stats"
+        ],
+        "title": "Solucio",
+        "description": "Horari resolt, en tres vistes indexades per [dia 0–4][hora 0–10]."
+      },
+      "StatsSolucio": {
+        "properties": {
+          "temps_resolucio": {
+            "type": "number",
+            "title": "Temps Resolucio",
+            "description": "Segons de cerca del solver.",
+            "examples": [
+              120.3
+            ]
+          },
+          "conflictes": {
+            "type": "integer",
+            "title": "Conflictes",
+            "description": "Conflictes explorats per CP-SAT (mesura de dificultat)."
+          },
+          "branques": {
+            "type": "integer",
+            "title": "Branques",
+            "description": "Branques explorades per CP-SAT."
+          },
+          "estat": {
+            "type": "string",
+            "title": "Estat",
+            "examples": [
+              "FEASIBLE"
+            ]
+          },
+          "objectiu": {
+            "type": "number",
+            "title": "Objectiu",
+            "description": "Valor de la funció objectiu (com més baix, millor): 10×hores_mortes + 20×preferències_no_respectades.",
+            "examples": [
+              3550.0
+            ]
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "temps_resolucio",
+          "conflictes",
+          "branques",
+          "estat",
+          "objectiu"
+        ],
+        "title": "StatsSolucio"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Servei",
+      "description": "Estat i metadades del servei."
+    },
+    {
+      "name": "Validació",
+      "description": "Validació i preprocessament de dades sense resoldre."
+    },
+    {
+      "name": "Resolució",
+      "description": "Construcció i resolució del model CP-SAT."
+    }
+  ]
+}

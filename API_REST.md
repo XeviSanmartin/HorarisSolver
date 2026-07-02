@@ -3,9 +3,18 @@
 Servei HTTP que exposa el pipeline complet del solver d'horaris (preprocessament +
 resolució amb OR-Tools CP-SAT). Construït amb FastAPI i desplegable a Vercel.
 
-> **Formats de dades:** aquest document descriu els *endpoints*. L'estructura
-> detallada dels JSON d'entrada (`Solver.json`) i de sortida (`solucio`) està
-> documentada a [`DOC_API_SOLVER.md`](DOC_API_SOLVER.md).
+> **La documentació canònica de l'API és l'especificació OpenAPI**, que descriu
+> cada endpoint, cada camp (amb tipus, rangs i descripcions) i cada resposta:
+>
+> - **Swagger UI (interactiva):** `https://<desplegament>/docs`
+> - **ReDoc (lectura):** `https://<desplegament>/redoc`
+> - **Espec JSON:** `https://<desplegament>/openapi.json` — còpia estàtica al
+>   repositori: [`openapi.json`](openapi.json) (regenerable amb
+>   `python scripts/exporta_openapi.py`; un test vigila que no quedi desfasada)
+>
+> Aquest document és una guia ràpida d'ús. L'estructura detallada dels JSON
+> d'entrada (`Solver.json`) i de sortida (`solucio`) també està documentada a
+> [`DOC_API_SOLVER.md`](DOC_API_SOLVER.md).
 
 ---
 

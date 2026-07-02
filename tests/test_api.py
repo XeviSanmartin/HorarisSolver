@@ -64,6 +64,36 @@ def test_openapi_disponible():
         assert ruta in rutes
 
 
+def test_openapi_esquemes_documentats():
+    """L'especificació ha de documentar els models d'entrada i sortida amb detall."""
+    spec = client.get('/openapi.json').json()
+    esquemes = spec['components']['schemas']
+    for model in ('DadesSolver', 'Professor', 'ModulProfessor', 'Desiderata',
+                  'ModulCataleg', 'Curs', 'Aula', 'Especialitat', 'OpcionsSolve',
+                  'RespostaSolve', 'Solucio', 'StatsSolucio', 'DetallError'):
+        assert model in esquemes, f'falta l\'esquema {model}'
+    # Camps amb descripció i restriccions de rang
+    desiderata = esquemes['Desiderata']['properties']
+    assert desiderata['dia']['maximum'] == 4
+    assert desiderata['tipus']['minimum'] == 1
+    assert 'description' in desiderata['tipus']
+    # Exemple complet de dades d'entrada
+    assert 'example' in esquemes['DadesSolver']
+    # Els endpoints documenten respostes d'error
+    solve = spec['paths']['/api/solve']['post']
+    assert '422' in solve['responses']
+    assert '500' in solve['responses']
+
+
+def test_openapi_estatic_actualitzat():
+    """openapi.json del repositori ha d'estar sincronitzat amb l'app
+    (regenerar amb scripts/exporta_openapi.py)."""
+    from api.index import app
+    with open(os.path.join(ARREL, 'openapi.json'), encoding='utf-8') as f:
+        estatic = json.load(f)
+    assert estatic == app.openapi()
+
+
 # ---------------------------------------------------------------------------
 # /api/validate
 # ---------------------------------------------------------------------------
@@ -89,10 +119,23 @@ def test_validate_dades_buides():
 
 
 def test_validate_estructura_invalida():
-    """Un professor sense camps obligatoris ha de donar 422 amb detall."""
+    """Un professor sense camps obligatoris ha de donar 422 (validació d'esquema)."""
     r = client.post('/api/validate', json={'dades': {'professors': [{'nom': 'x'}]}})
     assert r.status_code == 422
-    assert 'error' in r.json()['detail']
+    detall = r.json()['detail']
+    # Error Pydantic estàndard: llista amb la ubicació dels camps que falten
+    camps_absents = {e['loc'][-1] for e in detall if e['type'] == 'missing'}
+    assert {'index', 'nomCurt', 'especialitat'} <= camps_absents
+
+
+def test_validate_rangs_invalids():
+    """Valors fora de rang (dia 7, tipus 5) han de donar 422."""
+    dades = {'professors': [{
+        'index': 0, 'actiu': True, 'nom': 'X', 'nomCurt': 'X', 'especialitat': 0,
+        'desiderata': [{'dia': 7, 'hora': 3, 'tipus': 5}],
+    }]}
+    r = client.post('/api/validate', json={'dades': dades})
+    assert r.status_code == 422
 
 
 def test_validate_sense_cos():
@@ -117,10 +160,32 @@ def test_preprocess_estructura(dades_reals):
     assert 'moduls_especials' in config
 
 
+def _normalitza_ints(valor):
+    """Converteix strings enters ("-1") a int, recursivament.
+
+    Les dades antigues tenen alguns camps numèrics guardats com a string
+    (p. ex. tutorCurs: "-1"); l'esquema Pydantic de l'API els coerciona a int
+    deliberadament (això corregeix advertiments falsos com "tutoria de curs
+    inexistent: -1"). Per comparar amb la sortida del pipeline CLI antic cal
+    normalitzar totes dues bandes.
+    """
+    if isinstance(valor, dict):
+        return {k: _normalitza_ints(v) for k, v in valor.items()}
+    if isinstance(valor, list):
+        return [_normalitza_ints(v) for v in valor]
+    if isinstance(valor, str):
+        try:
+            return int(valor)
+        except ValueError:
+            return valor
+    return valor
+
+
 def test_preprocess_regressio():
     """La sortida del preprocessador via API ha de ser idèntica a la generada
     pel pipeline CLI original (dades_solver_processades.json prové de
-    BuitRestriccions.json)."""
+    BuitRestriccions.json), llevat de la coerció de tipus documentada a
+    _normalitza_ints."""
     with open(os.path.join(ARREL, 'BuitRestriccions.json'), encoding='utf-8') as f:
         entrada = json.load(f)
     with open(os.path.join(ARREL, 'dades_solver_processades.json'), encoding='utf-8') as f:
@@ -128,7 +193,7 @@ def test_preprocess_regressio():
 
     r = client.post('/api/preprocess', json={'dades': entrada})
     assert r.status_code == 200
-    assert r.json()['dades_processades'] == esperat
+    assert _normalitza_ints(r.json()['dades_processades']) == _normalitza_ints(esperat)
 
 
 # ---------------------------------------------------------------------------
