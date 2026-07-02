@@ -1,0 +1,5696 @@
+{
+  "app": "Editor d'horaris",
+  "versioMajor": 4,
+  "versioMenor": 59,
+  "dataHora": 1755786090142,
+  "autor": "HorariSolver",
+  "comentaris": "Solució generada automàticament",
+  "professors": [
+    {
+      "index": 0,
+      "actiu": true,
+      "nom": "Artur Juvé",
+      "nomCurt": "Artur",
+      "especialitat": 0,
+      "comentaris": "",
+      "tutorCurs": 2,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 7,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 8,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 9,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 27,
+          "hores": 2,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 44,
+          "hores": 6,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 45,
+          "hores": 2,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 63,
+          "hores": 2,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 36,
+          "hores": 1,
+          "aula": 7,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 36,
+          "hores": 1,
+          "aula": 9,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 36,
+          "hores": 1,
+          "aula": 7,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 37,
+          "hores": 1,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 2,
+          "hores": 1,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "actiu": true,
+      "nom": "Ferran Chic",
+      "nomCurt": "Ferran",
+      "especialitat": 0,
+      "comentaris": "He marcat en vermell dimarts i dijous de 8 a 10.\nUna d'aquestes dues franges poden ser intercanviables per dilluns, però en cas que permuteu dm o dj per dilluns, si fos possible, començar a les 11:30 en lloc de les 10:30. Ho dic pq els horaris de classe del gimnàs són dilluns de 9:30 a 10:30, dimarts de 8:00 a 9:00 i dijous de 8:00 a 9:00.",
+      "tutorCurs": 5,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 0,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 1,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 0,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 1,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 2,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 3,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 4,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 10,
+          "tipus": 1
+        },
+        {
+          "dia": 4,
+          "hora": 9,
+          "tipus": 1
+        },
+        {
+          "dia": 0,
+          "hora": 0,
+          "tipus": 1
+        },
+        {
+          "dia": 0,
+          "hora": 1,
+          "tipus": 1
+        },
+        {
+          "dia": 0,
+          "hora": 2,
+          "tipus": 1
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 61,
+          "hores": 4,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 62,
+          "hores": 6,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 32,
+          "hores": 1,
+          "aula": 7,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 32,
+          "hores": 1,
+          "aula": 5,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 4,
+          "hores": 1,
+          "aula": 7,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "actiu": true,
+      "nom": "Elvis Gallegos",
+      "nomCurt": "Elvis",
+      "especialitat": 1,
+      "comentaris": "Venir 3 tardes, preferentment dilluns i divendres",
+      "tutorCurs": -1,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 0,
+          "hores": 1,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 0,
+          "hores": 2,
+          "aula": 6,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 0,
+          "hores": 2,
+          "aula": 5,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 19,
+          "hores": 2,
+          "aula": 5,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 19,
+          "hores": 2,
+          "aula": 5,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 70,
+          "hores": 3,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 81,
+          "hores": 1,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 12,
+          "hores": 3,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "actiu": true,
+      "nom": "Núria Galí",
+      "nomCurt": "Núria",
+      "especialitat": 0,
+      "comentaris": "",
+      "tutorCurs": -1,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 0,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 0,
+          "hora": 4,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 6,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 7,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 0,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 1,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 2,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 3,
+          "tipus": 1
+        },
+        {
+          "dia": 1,
+          "hora": 4,
+          "tipus": 1
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 18,
+          "hores": 4,
+          "aula": 5,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 18,
+          "hores": 4,
+          "aula": 5,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "actiu": true,
+      "nom": "Xevi Terradellas",
+      "nomCurt": "Xevi T",
+      "especialitat": 1,
+      "comentaris": "El vermell l'he posat per indicar que prefereixo dilluns que dimarts",
+      "tutorCurs": -1,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 0,
+          "hora": 0,
+          "tipus": 1
+        },
+        {
+          "dia": 1,
+          "hora": 0,
+          "tipus": 1
+        },
+        {
+          "dia": 2,
+          "hora": 0,
+          "tipus": 1
+        },
+        {
+          "dia": 3,
+          "hora": 0,
+          "tipus": 1
+        },
+        {
+          "dia": 4,
+          "hora": 0,
+          "tipus": 1
+        },
+        {
+          "dia": 1,
+          "hora": 7,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 8,
+          "tipus": 2
+        },
+        {
+          "dia": 0,
+          "hora": 8,
+          "tipus": 1
+        },
+        {
+          "dia": 0,
+          "hora": 7,
+          "tipus": 1
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 72,
+          "hores": 3,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 33,
+          "hores": 1,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 33,
+          "hores": 1,
+          "aula": 9,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 33,
+          "hores": 1,
+          "aula": 6,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 37,
+          "hores": 2,
+          "aula": 7,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 39,
+          "hores": 2,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 40,
+          "hores": 2,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "actiu": true,
+      "nom": "Jordi Fons",
+      "nomCurt": "Jordi",
+      "especialitat": 1,
+      "comentaris": "A ser possible Programació, Entorns i tutoria ser del mateix grup (i si el mòdul optatiu es possible també)\nCom que enguany faig més tardes, reduir la quantitat de forats sense matar-vos massa, si no surt opció no surt\nEls dies que vinc només al matí no m'importa començar a les 8am i si et pot quadrar fer jo alguna de les guardies, sense problema...",
+      "tutorCurs": 3,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 53,
+          "hores": 6,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 54,
+          "hores": 2,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 32,
+          "hores": 1,
+          "aula": 2,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 78,
+          "hores": 1,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 38,
+          "hores": 2,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 40,
+          "hores": 2,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 1,
+          "hores": 1,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 84,
+          "hores": 1,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 73,
+          "hores": 3,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "actiu": true,
+      "nom": "Toni Martínez",
+      "nomCurt": "Toni",
+      "especialitat": 0,
+      "comentaris": "No m'importa començar a les 8\nSi us va bé pels quadrar horaris, podeu no desdoblar d'ASIX2 Aplicacions web, i desdoblar una hora més (100%) d'ASIX1 llenguatges de marques.",
+      "tutorCurs": 4,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 0,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 1,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 2,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 3,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 4,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 9,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 10,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 9,
+          "tipus": 1
+        },
+        {
+          "dia": 4,
+          "hora": 10,
+          "tipus": 1
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 21,
+          "hores": 1,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 21,
+          "hores": 1,
+          "aula": 0,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 21,
+          "hores": 1,
+          "aula": 2,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 28,
+          "hores": 1,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 28,
+          "hores": 1,
+          "aula": 8,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 28,
+          "hores": 1,
+          "aula": 8,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 31,
+          "hores": 3,
+          "aula": 7,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 41,
+          "hores": 2,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 50,
+          "hores": 2,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 59,
+          "hores": 2,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 9,
+          "hores": 1,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "actiu": true,
+      "nom": "Xevi Sanmartín",
+      "nomCurt": "Xevi S",
+      "especialitat": 0,
+      "comentaris": "",
+      "tutorCurs": -1,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 4,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 3,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 6,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 7,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 8,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 9,
+          "tipus": 1
+        },
+        {
+          "dia": 3,
+          "hora": 10,
+          "tipus": 1
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 83,
+          "hores": 6,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 37,
+          "hores": 3,
+          "aula": 7,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 77,
+          "hores": 1,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 34,
+          "hores": 1,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 34,
+          "hores": 1,
+          "aula": 8,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 34,
+          "hores": 1,
+          "aula": 0,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 35,
+          "hores": 1,
+          "aula": 7,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 35,
+          "hores": 1,
+          "aula": 0,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 35,
+          "hores": 1,
+          "aula": 6,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "actiu": true,
+      "nom": "Narcís Buisac",
+      "nomCurt": "Narcís B",
+      "especialitat": 0,
+      "comentaris": "M OPTATIU juntar-lo amb Sostenibilitat i fer 2 + 2 (mig grup) + 2 (mig grup) \nNo posar 4 hores de la mateixa matèria el mateix dia amb els mateixos alumnes, aquest darrer curs feia tot el grup i després mig grup i no va massa bé ",
+      "tutorCurs": 0,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 22,
+          "hores": 1,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 22,
+          "hores": 2,
+          "aula": 6,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 22,
+          "hores": 2,
+          "aula": 0,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 24,
+          "hores": 1,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 30,
+          "hores": 2,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 71,
+          "hores": 4,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 52,
+          "hores": 4,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 6,
+          "hores": 1,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "actiu": true,
+      "nom": "Narcís Falgueras",
+      "nomCurt": "Narcís F",
+      "especialitat": 0,
+      "comentaris": "",
+      "tutorCurs": 1,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 0,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 1,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 1,
+          "tipus": 2
+        },
+        {
+          "dia": 3,
+          "hora": 0,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 0,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 1,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 1,
+          "tipus": 1
+        },
+        {
+          "dia": 2,
+          "hora": 0,
+          "tipus": 1
+        },
+        {
+          "dia": 0,
+          "hora": 0,
+          "tipus": 1
+        },
+        {
+          "dia": 0,
+          "hora": 1,
+          "tipus": 1
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 0,
+          "hora": 7,
+          "tipus": 2
+        },
+        {
+          "dia": 0,
+          "hora": 8,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 7,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 8,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 20,
+          "hores": 2,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 20,
+          "hores": 2,
+          "aula": 6,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 20,
+          "hores": 2,
+          "aula": 0,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 29,
+          "hores": 1,
+          "aula": 7,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 76,
+          "hores": 1,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 31,
+          "hores": 2,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 7,
+          "hores": 1,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 29,
+          "hores": 1,
+          "aula": 7,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "actiu": true,
+      "nom": "Carles Mellado",
+      "nomCurt": "Carles",
+      "especialitat": 0,
+      "comentaris": "",
+      "tutorCurs": 6,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 3,
+          "hores": 1,
+          "aula": 7,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 3,
+          "hores": 2,
+          "aula": 1,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 3,
+          "hores": 2,
+          "aula": 1,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 80,
+          "hores": 1,
+          "aula": 7,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 40,
+          "hores": 1,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 5,
+          "hores": 1,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 69,
+          "hores": 3,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "actiu": true,
+      "nom": "Miquel Mayà",
+      "nomCurt": "Miquel",
+      "especialitat": 0,
+      "comentaris": "",
+      "tutorCurs": 7,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 10,
+          "hores": 3,
+          "aula": 2,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 10,
+          "hores": 3,
+          "aula": 0,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 14,
+          "hores": 3,
+          "aula": 6,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 14,
+          "hores": 3,
+          "aula": 0,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 15,
+          "hores": 2,
+          "aula": 1,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 15,
+          "hores": 2,
+          "aula": 6,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 16,
+          "hores": 1,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 8,
+          "hores": 1,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "actiu": true,
+      "nom": "Àngel Garriga",
+      "nomCurt": "Àngel",
+      "especialitat": 0,
+      "comentaris": "",
+      "tutorCurs": -1,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 11,
+          "hores": 4,
+          "aula": 6,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 11,
+          "hores": 4,
+          "aula": 5,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 13,
+          "hores": 3,
+          "aula": 8,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 13,
+          "hores": 3,
+          "aula": 1,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 16,
+          "hores": 2,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "actiu": true,
+      "nom": "Imma Moreno",
+      "nomCurt": "Imma",
+      "especialitat": 1,
+      "comentaris": "Podria fer guardia els dilluns de 8 a 10 h sempre i quan no plegui més tard de desprès del pati de tardes del mateix dilluns\nintentar no posar 4 hores de la mateixa matèria el mateix dia amb els mateixos alumnes . Si  amb el  mig grup 2 hores i  l'altre mig grup 2 mes el mateix dia\nIntentar no plegar les últimes hores més d'un dia ja que tambe faig matins\nCap problema en començar a les 8",
+      "tutorCurs": "-1",
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 7,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 8,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 9,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 10,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 7,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 8,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 9,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 10,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 17,
+          "hores": 2,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 17,
+          "hores": 2,
+          "aula": 2,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 17,
+          "hores": 2,
+          "aula": 2,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 26,
+          "hores": 2,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 26,
+          "hores": 2,
+          "aula": 0,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 26,
+          "hores": 2,
+          "aula": 0,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 31,
+          "hores": 1,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 51,
+          "hores": 3,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 60,
+          "hores": 3,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "actiu": true,
+      "nom": "Xevi Grau",
+      "nomCurt": "Xevi G",
+      "especialitat": 2,
+      "comentaris": "",
+      "tutorCurs": -1,
+      "desiderata": [
+        {
+          "dia": 2,
+          "hora": 0,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 1,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 2,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 3,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 4,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 25,
+          "hores": 3,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 75,
+          "hores": 2,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 49,
+          "hores": 3,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 79,
+          "hores": 1,
+          "aula": 6,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": true
+        },
+        {
+          "index": 82,
+          "hores": 1,
+          "aula": 6,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": true
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "actiu": true,
+      "nom": "Laura Algueró",
+      "nomCurt": "Laura",
+      "especialitat": 3,
+      "comentaris": "",
+      "tutorCurs": -1,
+      "desiderata": [
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 46,
+          "hores": 2,
+          "aula": 5,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 55,
+          "hores": 2,
+          "aula": 8,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 64,
+          "hores": 2,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 23,
+          "hores": 2,
+          "aula": 6,
+          "subgrup": 1,
+          "suport": false,
+          "simultani": false
+        },
+        {
+          "index": 23,
+          "hores": 2,
+          "aula": 0,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "actiu": true,
+      "nom": "Xevi Grau 2",
+      "nomCurt": "Xevi G2",
+      "especialitat": 2,
+      "comentaris": "",
+      "tutorCurs": -1,
+      "desiderata": [
+        {
+          "dia": 2,
+          "hora": 0,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 1,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 2,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 3,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 4,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 82,
+          "hores": 1,
+          "aula": 6,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": true
+        },
+        {
+          "index": 79,
+          "hores": 1,
+          "aula": 6,
+          "subgrup": 2,
+          "suport": false,
+          "simultani": true
+        },
+        {
+          "index": 58,
+          "hores": 3,
+          "aula": 9,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "actiu": true,
+      "nom": "Xevi Grau 3",
+      "nomCurt": "Xevi G",
+      "especialitat": 2,
+      "comentaris": "",
+      "tutorCurs": -1,
+      "desiderata": [
+        {
+          "dia": 2,
+          "hora": 0,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 1,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 2,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 3,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 4,
+          "tipus": 2
+        },
+        {
+          "dia": 2,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 1,
+          "hora": 5,
+          "tipus": 2
+        },
+        {
+          "dia": 4,
+          "hora": 5,
+          "tipus": 2
+        }
+      ],
+      "moduls": [
+        {
+          "index": 67,
+          "hores": 3,
+          "aula": 1,
+          "subgrup": 3,
+          "suport": false,
+          "simultani": false
+        }
+      ]
+    }
+  ],
+  "cursos": [
+    {
+      "index": 0,
+      "actiu": true,
+      "nom": "ASIX1",
+      "color": [
+        250,
+        200,
+        200
+      ],
+      "aula": 1
+    },
+    {
+      "index": 1,
+      "actiu": true,
+      "nom": "ASIX2",
+      "color": [
+        250,
+        170,
+        170
+      ],
+      "aula": 7
+    },
+    {
+      "index": 2,
+      "actiu": true,
+      "nom": "DAMW A",
+      "color": [
+        181,
+        227,
+        227
+      ],
+      "aula": 5
+    },
+    {
+      "index": 3,
+      "actiu": true,
+      "nom": "DAMW B",
+      "color": [
+        117,
+        184,
+        184
+      ],
+      "aula": 2
+    },
+    {
+      "index": 4,
+      "actiu": true,
+      "nom": "DAMW C",
+      "color": [
+        86,
+        153,
+        153
+      ],
+      "aula": 6
+    },
+    {
+      "index": 5,
+      "actiu": true,
+      "nom": "DAM2",
+      "color": [
+        200,
+        250,
+        200
+      ],
+      "aula": 1
+    },
+    {
+      "index": 6,
+      "actiu": true,
+      "nom": "DAW2",
+      "color": [
+        200,
+        200,
+        255
+      ],
+      "aula": 5
+    },
+    {
+      "index": 7,
+      "actiu": true,
+      "nom": "CIBER",
+      "color": [
+        250,
+        250,
+        200
+      ],
+      "aula": 6
+    },
+    {
+      "index": 8,
+      "actiu": true,
+      "nom": "DAMW D",
+      "aula": 0,
+      "color": [
+        75,
+        134,
+        124
+      ]
+    }
+  ],
+  "moduls": [
+    {
+      "index": 0,
+      "codi": "M6-0612",
+      "nom": "Desenvolupament entorn client",
+      "curs": 6,
+      "especialitat": 1
+    },
+    {
+      "index": 1,
+      "codi": "TUTORIA",
+      "nom": "Tutoria DAMW B",
+      "curs": 3,
+      "especialitat": 0
+    },
+    {
+      "index": 2,
+      "codi": "TUTORIA",
+      "nom": "Tutoria DAMW A",
+      "curs": 2,
+      "especialitat": 0
+    },
+    {
+      "index": 3,
+      "codi": "M7-0613",
+      "nom": "Desenvolupament entorn servidor",
+      "curs": 6,
+      "especialitat": 0
+    },
+    {
+      "index": 4,
+      "codi": "TUTORIA",
+      "nom": "Tutoria DAM2",
+      "curs": 5,
+      "especialitat": -1
+    },
+    {
+      "index": 5,
+      "codi": "TUTORIA",
+      "nom": "Tutoria DAW2",
+      "curs": 6,
+      "especialitat": -1
+    },
+    {
+      "index": 6,
+      "codi": "TUTORIA",
+      "nom": "Tutoria ASIX1",
+      "curs": 0,
+      "especialitat": -1
+    },
+    {
+      "index": 7,
+      "codi": "TUTORIA",
+      "nom": "Tutoria ASIX2",
+      "curs": 1,
+      "especialitat": -1
+    },
+    {
+      "index": 8,
+      "codi": "TUTORIA",
+      "nom": "Tutoria CIBER",
+      "curs": 7,
+      "especialitat": -1
+    },
+    {
+      "index": 9,
+      "codi": "TUTORIA",
+      "nom": "Tutoria DAMW C",
+      "curs": 4,
+      "especialitat": -1
+    },
+    {
+      "index": 10,
+      "codi": "MP01",
+      "nom": "Incidents de ciberseguretat",
+      "curs": 7,
+      "especialitat": 0
+    },
+    {
+      "index": 11,
+      "codi": "MP02",
+      "nom": "Enfortiment de xarxes i sistemes",
+      "curs": 7,
+      "especialitat": 1
+    },
+    {
+      "index": 12,
+      "codi": "MP03",
+      "nom": "Posada en producció segura",
+      "curs": 7,
+      "especialitat": 1
+    },
+    {
+      "index": 13,
+      "codi": "MP04",
+      "nom": "Anàlisi forense informàtic",
+      "curs": 7,
+      "especialitat": 1
+    },
+    {
+      "index": 14,
+      "codi": "MP05",
+      "nom": "Hacking ètic",
+      "curs": 7,
+      "especialitat": 0
+    },
+    {
+      "index": 15,
+      "codi": "MP06",
+      "nom": "Normativa de ciberseguretat",
+      "curs": 7,
+      "especialitat": 0
+    },
+    {
+      "index": 16,
+      "codi": "MP07",
+      "nom": "Projecte de ciberseguretat",
+      "curs": 7,
+      "especialitat": -1
+    },
+    {
+      "index": 17,
+      "codi": "M1-0369",
+      "nom": "Implantació de sistemes operatius",
+      "curs": 0,
+      "especialitat": 1
+    },
+    {
+      "index": 18,
+      "codi": "M7-0370",
+      "nom": "Planificació i administració de xarxes",
+      "curs": 0,
+      "especialitat": 0
+    },
+    {
+      "index": 19,
+      "codi": "M5-0371",
+      "nom": "Fonaments de maquinari",
+      "curs": 0,
+      "especialitat": 1
+    },
+    {
+      "index": 20,
+      "codi": "M2-0372",
+      "nom": "Gestió de bases de dades",
+      "curs": 0,
+      "especialitat": 0
+    },
+    {
+      "index": 21,
+      "codi": "M4-0373",
+      "nom": "Llenguatges de marques",
+      "curs": 0,
+      "especialitat": 0
+    },
+    {
+      "index": 22,
+      "codi": "M3-OPT",
+      "nom": "Programació bàsica",
+      "curs": 0,
+      "especialitat": -1
+    },
+    {
+      "index": 23,
+      "codi": "AN-0179",
+      "nom": "Anglès professional",
+      "curs": 0,
+      "especialitat": "-1"
+    },
+    {
+      "index": 24,
+      "codi": "SO-1708",
+      "nom": "Sostenibilitat",
+      "curs": 0,
+      "especialitat": -1
+    },
+    {
+      "index": 25,
+      "codi": "IPO-1709",
+      "nom": "IPO1",
+      "curs": 0,
+      "especialitat": 2
+    },
+    {
+      "index": 26,
+      "codi": "M6-0374",
+      "nom": "Administració de sistemes operatius",
+      "curs": 1,
+      "especialitat": 1
+    },
+    {
+      "index": 27,
+      "codi": "M8-0375",
+      "nom": "Serveis de xarxa i Internet",
+      "curs": 1,
+      "especialitat": 0
+    },
+    {
+      "index": 28,
+      "codi": "M9-0376",
+      "nom": "Implantació d'aplicacions web",
+      "curs": 1,
+      "especialitat": 0
+    },
+    {
+      "index": 29,
+      "codi": "M10-0377",
+      "nom": "Administració de SGBD",
+      "curs": 1,
+      "especialitat": 0
+    },
+    {
+      "index": 30,
+      "codi": "M11-0378",
+      "nom": "Seguretat i alta disponibilitat",
+      "curs": 1,
+      "especialitat": 0
+    },
+    {
+      "index": 31,
+      "codi": "M14-0379",
+      "nom": "Projecte",
+      "curs": 1,
+      "especialitat": -1
+    },
+    {
+      "index": 32,
+      "codi": "M6-0486",
+      "nom": "Accés a dades",
+      "curs": 5,
+      "especialitat": 0
+    },
+    {
+      "index": 33,
+      "codi": "M7-0488",
+      "nom": "Desenvolupament d’interfícies",
+      "curs": 5,
+      "especialitat": 1
+    },
+    {
+      "index": 34,
+      "codi": "M8-0489",
+      "nom": "Programació multimèdia i mòbils",
+      "curs": 5,
+      "especialitat": 0
+    },
+    {
+      "index": 35,
+      "codi": "M09-0490",
+      "nom": "Programació de serveis i processos",
+      "curs": 5,
+      "especialitat": 0
+    },
+    {
+      "index": 36,
+      "codi": "M10-0491",
+      "nom": "Sistemes de gestió empresarial",
+      "curs": 5,
+      "especialitat": 1
+    },
+    {
+      "index": 37,
+      "codi": "M13-0492",
+      "nom": "Projecte DAM",
+      "curs": 5,
+      "especialitat": -1
+    },
+    {
+      "index": 38,
+      "codi": "M8-0614",
+      "nom": "Desplegament d’aplicacions web",
+      "curs": 6,
+      "especialitat": 0
+    },
+    {
+      "index": 39,
+      "codi": "M9-0615",
+      "nom": "Disseny d’interfícies web",
+      "curs": 6,
+      "especialitat": 1
+    },
+    {
+      "index": 40,
+      "codi": "M12-0616",
+      "nom": "Projecte DAW",
+      "curs": 6,
+      "especialitat": -1
+    },
+    {
+      "index": 41,
+      "codi": "M4-0373",
+      "nom": "Llenguatges de marques",
+      "curs": 2,
+      "especialitat": 0
+    },
+    {
+      "index": 44,
+      "codi": "M3-0485",
+      "nom": "Programació",
+      "curs": 2,
+      "especialitat": 0
+    },
+    {
+      "index": 45,
+      "codi": "M5-0487",
+      "nom": "Entorns de desenvolupament",
+      "curs": 2,
+      "especialitat": 0
+    },
+    {
+      "index": 46,
+      "codi": "AN-0179",
+      "nom": "Anglès professional",
+      "curs": 2,
+      "especialitat": -1
+    },
+    {
+      "index": 49,
+      "codi": "IPO-1709",
+      "nom": "IPO 1",
+      "curs": 2,
+      "especialitat": 2
+    },
+    {
+      "index": 50,
+      "codi": "M4-0373",
+      "nom": "Llenguatges de marques",
+      "curs": 3,
+      "especialitat": 0
+    },
+    {
+      "index": 51,
+      "codi": "M1-0483",
+      "nom": "Sistemes informàtics",
+      "curs": 3,
+      "especialitat": 1
+    },
+    {
+      "index": 52,
+      "codi": "M2-0484",
+      "nom": "Bases de dades",
+      "curs": 3,
+      "especialitat": 0
+    },
+    {
+      "index": 53,
+      "codi": "M3-0485",
+      "nom": "Programació",
+      "curs": 3,
+      "especialitat": 0
+    },
+    {
+      "index": 54,
+      "codi": "M5-0487",
+      "nom": "Entorns de desenvolupament",
+      "curs": 3,
+      "especialitat": 0
+    },
+    {
+      "index": 55,
+      "codi": "AN-0179",
+      "nom": "Anglès professional",
+      "curs": 3,
+      "especialitat": -1
+    },
+    {
+      "index": 58,
+      "codi": "IPO-1709",
+      "nom": "IPO 1",
+      "curs": 3,
+      "especialitat": 2
+    },
+    {
+      "index": 59,
+      "codi": "M4-0373",
+      "nom": "Llenguatges de marques",
+      "curs": 4,
+      "especialitat": 0
+    },
+    {
+      "index": 60,
+      "codi": "M1-0483",
+      "nom": "Sistemes informàtics",
+      "curs": 4,
+      "especialitat": 1
+    },
+    {
+      "index": 61,
+      "codi": "M2-0484",
+      "nom": "Bases de dades",
+      "curs": 4,
+      "especialitat": 0
+    },
+    {
+      "index": 62,
+      "codi": "M3-0485",
+      "nom": "Programació",
+      "curs": 4,
+      "especialitat": 0
+    },
+    {
+      "index": 63,
+      "codi": "M5-0487",
+      "nom": "Entorns de desenvolupament",
+      "curs": 4,
+      "especialitat": 0
+    },
+    {
+      "index": 64,
+      "codi": "AN-0179",
+      "nom": "Anglès professional",
+      "curs": 4,
+      "especialitat": -1
+    },
+    {
+      "index": 67,
+      "codi": "IPO-1709",
+      "nom": "IPO 1",
+      "curs": 4,
+      "especialitat": 2
+    },
+    {
+      "index": 69,
+      "codi": "OPT_B",
+      "nom": "Mòdul optatiu",
+      "curs": 3,
+      "especialitat": -1
+    },
+    {
+      "index": 70,
+      "codi": "OPT_C",
+      "nom": "Mòdul optatiu",
+      "curs": 4,
+      "especialitat": -1
+    },
+    {
+      "index": 71,
+      "codi": "M2-0484",
+      "nom": "Bases de dades",
+      "curs": 2,
+      "especialitat": 0
+    },
+    {
+      "index": 72,
+      "codi": "M1-0483",
+      "nom": "Sistemes informàtics",
+      "curs": 2,
+      "especialitat": 1
+    },
+    {
+      "index": 73,
+      "codi": "OPT_A",
+      "nom": "Mòdul optatiu",
+      "curs": 2,
+      "especialitat": -1
+    },
+    {
+      "index": 74,
+      "codi": "REP",
+      "nom": "Repàs",
+      "curs": 5,
+      "especialitat": -1
+    },
+    {
+      "index": 75,
+      "codi": "IPO-1710",
+      "nom": "IPO2",
+      "curs": 1,
+      "especialitat": 2
+    },
+    {
+      "index": 76,
+      "codi": "DI-1665",
+      "nom": "Digitalització",
+      "curs": 1,
+      "especialitat": -1
+    },
+    {
+      "index": 77,
+      "codi": "DI-1665",
+      "nom": "Digitalització",
+      "curs": 5,
+      "especialitat": -1
+    },
+    {
+      "index": 78,
+      "codi": "SO-1708",
+      "nom": "Sostenibilitat",
+      "curs": 5,
+      "especialitat": -1
+    },
+    {
+      "index": 79,
+      "codi": "IPO-1710",
+      "nom": "IPO2",
+      "curs": 5,
+      "especialitat": -1
+    },
+    {
+      "index": 80,
+      "codi": "DI-1665",
+      "nom": "Digitalització",
+      "curs": 6,
+      "especialitat": -1
+    },
+    {
+      "index": 81,
+      "codi": "SO-1708",
+      "nom": "Sostenibilitat",
+      "curs": 6,
+      "especialitat": -1
+    },
+    {
+      "index": 82,
+      "codi": "IPO-1710",
+      "nom": "IPO2",
+      "curs": 6,
+      "especialitat": -1
+    },
+    {
+      "index": 83,
+      "codi": "M3-0485",
+      "nom": "Programació",
+      "curs": 8,
+      "especialitat": 0
+    },
+    {
+      "index": 84,
+      "codi": "M12-0616",
+      "nom": "Projecte DAW",
+      "curs": 6,
+      "especialitat": -1
+    }
+  ],
+  "aules": [
+    {
+      "index": 0,
+      "actiu": true,
+      "nom": "Aula 3.01"
+    },
+    {
+      "index": 1,
+      "actiu": true,
+      "nom": "Aula 3.02"
+    },
+    {
+      "index": 2,
+      "actiu": true,
+      "nom": "Aula 3.03"
+    },
+    {
+      "index": 5,
+      "actiu": true,
+      "nom": "Aula 3.04"
+    },
+    {
+      "index": 6,
+      "actiu": true,
+      "nom": "Aula 3.05"
+    },
+    {
+      "index": 7,
+      "actiu": true,
+      "nom": "Aula 3.10"
+    },
+    {
+      "index": 8,
+      "actiu": true,
+      "nom": "Aula 3.02 (grup B)"
+    },
+    {
+      "index": 9,
+      "actiu": true,
+      "nom": "Aula 3.02 (grup C)"
+    }
+  ],
+  "especialitats": [
+    {
+      "index": 0,
+      "actiu": true,
+      "codi": "507",
+      "nom": "Informàtica"
+    },
+    {
+      "index": 1,
+      "actiu": true,
+      "codi": "627",
+      "nom": "Sistemes i aplicacions informàtiques"
+    },
+    {
+      "index": 2,
+      "actiu": true,
+      "codi": "505",
+      "nom": "Formació i orientació laboral"
+    },
+    {
+      "index": 3,
+      "actiu": true,
+      "codi": "ANG",
+      "nom": "Anglès"
+    }
+  ],
+  "horari": [
+    [
+      [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 25,
+            "curs": 0,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 14
+          },
+          {
+            "modul": 46,
+            "curs": 2,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 15
+          },
+          {
+            "modul": 58,
+            "curs": 3,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 16
+          },
+          {
+            "modul": 67,
+            "curs": 4,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 17
+          }
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 59,
+            "curs": 4,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 25,
+            "curs": 0,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 14
+          },
+          {
+            "modul": 46,
+            "curs": 2,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 15
+          },
+          {
+            "modul": 58,
+            "curs": 3,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 16
+          },
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 72,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          {
+            "modul": 1,
+            "curs": 3,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          {
+            "modul": 9,
+            "curs": 4,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          {
+            "modul": 20,
+            "curs": 0,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          {
+            "modul": 61,
+            "curs": 4,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          {
+            "modul": 18,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 3
+          },
+          null,
+          {
+            "modul": 54,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          {
+            "modul": 41,
+            "curs": 2,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          {
+            "modul": 20,
+            "curs": 0,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          {
+            "modul": 62,
+            "curs": 4,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 53,
+            "curs": 3,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          {
+            "modul": 21,
+            "curs": 0,
+            "aula": 2,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          {
+            "modul": 83,
+            "curs": 8,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          {
+            "modul": 71,
+            "curs": 2,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          {
+            "modul": 20,
+            "curs": 0,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          {
+            "modul": 62,
+            "curs": 4,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 53,
+            "curs": 3,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          {
+            "modul": 83,
+            "curs": 8,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 17,
+            "curs": 0,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          {
+            "modul": 12,
+            "curs": 7,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          {
+            "modul": 38,
+            "curs": 6,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          {
+            "modul": 37,
+            "curs": 5,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 26,
+            "curs": 1,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          {
+            "modul": 0,
+            "curs": 6,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          {
+            "modul": 32,
+            "curs": 5,
+            "aula": 2,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          {
+            "modul": 34,
+            "curs": 5,
+            "aula": 8,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 15,
+            "curs": 7,
+            "aula": 1,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 11,
+            "curs": 7,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          {
+            "modul": 31,
+            "curs": 1,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          {
+            "modul": 0,
+            "curs": 6,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 35,
+            "curs": 5,
+            "aula": 7,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          null,
+          {
+            "modul": 3,
+            "curs": 6,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          {
+            "modul": 15,
+            "curs": 7,
+            "aula": 1,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 13,
+            "curs": 7,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          {
+            "modul": 26,
+            "curs": 1,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 36,
+            "curs": 5,
+            "aula": 7,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          {
+            "modul": 81,
+            "curs": 6,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 8,
+            "curs": 7,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          null,
+          {
+            "modul": 26,
+            "curs": 1,
+            "aula": 0,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 36,
+            "curs": 5,
+            "aula": 9,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 14,
+            "curs": 7,
+            "aula": 0,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 21,
+            "curs": 0,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 49,
+            "curs": 2,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 14
+          },
+          {
+            "modul": 55,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 15
+          },
+          null,
+          {
+            "modul": 67,
+            "curs": 4,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 17
+          }
+        ],
+        [
+          null,
+          null,
+          {
+            "modul": 19,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 41,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 17,
+            "curs": 0,
+            "aula": 0,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          {
+            "modul": 55,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 15
+          },
+          null,
+          {
+            "modul": 67,
+            "curs": 4,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 17
+          }
+        ],
+        [
+          {
+            "modul": 2,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          {
+            "modul": 61,
+            "curs": 4,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          {
+            "modul": 19,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 50,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 17,
+            "curs": 0,
+            "aula": 2,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          {
+            "modul": 62,
+            "curs": 4,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          null,
+          {
+            "modul": 72,
+            "curs": 2,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          {
+            "modul": 53,
+            "curs": 3,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          {
+            "modul": 21,
+            "curs": 0,
+            "aula": 0,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          {
+            "modul": 83,
+            "curs": 8,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 17,
+            "curs": 0,
+            "aula": 2,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          {
+            "modul": 62,
+            "curs": 4,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 53,
+            "curs": 3,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          {
+            "modul": 83,
+            "curs": 8,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 17,
+            "curs": 0,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 37,
+            "curs": 5,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          {
+            "modul": 30,
+            "curs": 1,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 13,
+            "curs": 7,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 77,
+            "curs": 5,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          {
+            "modul": 30,
+            "curs": 1,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          {
+            "modul": 3,
+            "curs": 6,
+            "aula": 9,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          {
+            "modul": 15,
+            "curs": 7,
+            "aula": 2,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 13,
+            "curs": 7,
+            "aula": 5,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 76,
+            "curs": 1,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          {
+            "modul": 3,
+            "curs": 6,
+            "aula": 7,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          {
+            "modul": 14,
+            "curs": 7,
+            "aula": 1,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 13,
+            "curs": 7,
+            "aula": 9,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 5,
+            "curs": 6,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          {
+            "modul": 14,
+            "curs": 7,
+            "aula": 2,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 13,
+            "curs": 7,
+            "aula": 8,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          {
+            "modul": 75,
+            "curs": 1,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 14
+          },
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 40,
+            "curs": 6,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          null,
+          {
+            "modul": 16,
+            "curs": 7,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          {
+            "modul": 75,
+            "curs": 1,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 14
+          },
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 73,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          null,
+          {
+            "modul": 52,
+            "curs": 3,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 60,
+            "curs": 4,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          {
+            "modul": 23,
+            "curs": 0,
+            "aula": 0,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 15
+          },
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          {
+            "modul": 18,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 3
+          },
+          null,
+          {
+            "modul": 73,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          null,
+          {
+            "modul": 52,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 60,
+            "curs": 4,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          {
+            "modul": 23,
+            "curs": 0,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 15
+          },
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          {
+            "modul": 18,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 3
+          },
+          null,
+          {
+            "modul": 73,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          null,
+          {
+            "modul": 22,
+            "curs": 0,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          {
+            "modul": 69,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          null,
+          null,
+          {
+            "modul": 60,
+            "curs": 4,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 63,
+            "curs": 4,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          null,
+          {
+            "modul": 18,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 3
+          },
+          null,
+          {
+            "modul": 54,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          null,
+          {
+            "modul": 71,
+            "curs": 2,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 17,
+            "curs": 0,
+            "aula": 2,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 45,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          null,
+          {
+            "modul": 18,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 3
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 22,
+            "curs": 0,
+            "aula": 8,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 51,
+            "curs": 3,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          {
+            "modul": 18,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 3
+          },
+          {
+            "modul": 72,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 27,
+            "curs": 1,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          {
+            "modul": 32,
+            "curs": 5,
+            "aula": 7,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          null,
+          {
+            "modul": 40,
+            "curs": 6,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 10,
+            "curs": 7,
+            "aula": 1,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 27,
+            "curs": 1,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          {
+            "modul": 4,
+            "curs": 5,
+            "aula": 7,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          null,
+          {
+            "modul": 39,
+            "curs": 6,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 15,
+            "curs": 7,
+            "aula": 6,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 11,
+            "curs": 7,
+            "aula": 2,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 37,
+            "curs": 5,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          null,
+          {
+            "modul": 31,
+            "curs": 1,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 16,
+            "curs": 7,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          null,
+          null,
+          {
+            "modul": 82,
+            "curs": 6,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 14
+          },
+          null,
+          {
+            "modul": 82,
+            "curs": 6,
+            "aula": 6,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 16
+          },
+          null
+        ],
+        [
+          null,
+          null,
+          {
+            "modul": 12,
+            "curs": 7,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          {
+            "modul": 40,
+            "curs": 6,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          null,
+          {
+            "modul": 28,
+            "curs": 1,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 79,
+            "curs": 5,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 14
+          },
+          null,
+          {
+            "modul": 79,
+            "curs": 5,
+            "aula": 6,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 16
+          },
+          null
+        ],
+        [
+          null,
+          null,
+          {
+            "modul": 12,
+            "curs": 7,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          {
+            "modul": 33,
+            "curs": 5,
+            "aula": 6,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          null,
+          null,
+          {
+            "modul": 35,
+            "curs": 5,
+            "aula": 0,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          {
+            "modul": 29,
+            "curs": 1,
+            "aula": 7,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      [
+        [
+          null,
+          {
+            "modul": 61,
+            "curs": 4,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          {
+            "modul": 18,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 3
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 49,
+            "curs": 2,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 14
+          },
+          {
+            "modul": 23,
+            "curs": 0,
+            "aula": 6,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 15
+          },
+          {
+            "modul": 58,
+            "curs": 3,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 16
+          },
+          null
+        ],
+        [
+          null,
+          {
+            "modul": 62,
+            "curs": 4,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 53,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          {
+            "modul": 83,
+            "curs": 8,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          {
+            "modul": 22,
+            "curs": 0,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 49,
+            "curs": 2,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 14
+          },
+          {
+            "modul": 23,
+            "curs": 0,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 15
+          },
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 44,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          {
+            "modul": 62,
+            "curs": 4,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 53,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          {
+            "modul": 83,
+            "curs": 8,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          {
+            "modul": 22,
+            "curs": 0,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          {
+            "modul": 20,
+            "curs": 0,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 45,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          {
+            "modul": 61,
+            "curs": 4,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          {
+            "modul": 19,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 52,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          {
+            "modul": 20,
+            "curs": 0,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 44,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          {
+            "modul": 70,
+            "curs": 4,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 52,
+            "curs": 3,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          {
+            "modul": 20,
+            "curs": 0,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 44,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          {
+            "modul": 19,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 59,
+            "curs": 4,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 36,
+            "curs": 5,
+            "aula": 7,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          {
+            "modul": 0,
+            "curs": 6,
+            "aula": 6,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 31,
+            "curs": 1,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 10,
+            "curs": 7,
+            "aula": 5,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 37,
+            "curs": 5,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          {
+            "modul": 0,
+            "curs": 6,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 31,
+            "curs": 1,
+            "aula": 7,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 3,
+            "curs": 6,
+            "aula": 1,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          {
+            "modul": 14,
+            "curs": 7,
+            "aula": 0,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 11,
+            "curs": 7,
+            "aula": 2,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          {
+            "modul": 0,
+            "curs": 6,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          {
+            "modul": 37,
+            "curs": 5,
+            "aula": 7,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          null,
+          {
+            "modul": 28,
+            "curs": 1,
+            "aula": 8,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 3,
+            "curs": 6,
+            "aula": 1,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          {
+            "modul": 10,
+            "curs": 7,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 11,
+            "curs": 7,
+            "aula": 2,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          {
+            "modul": 26,
+            "curs": 1,
+            "aula": 0,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 33,
+            "curs": 5,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          null,
+          {
+            "modul": 28,
+            "curs": 1,
+            "aula": 8,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 80,
+            "curs": 6,
+            "aula": 7,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          {
+            "modul": 10,
+            "curs": 7,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 11,
+            "curs": 7,
+            "aula": 2,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          {
+            "modul": 26,
+            "curs": 1,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 16,
+            "curs": 7,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          {
+            "modul": 26,
+            "curs": 1,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 50,
+            "curs": 3,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 6
+          },
+          null,
+          {
+            "modul": 71,
+            "curs": 2,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 25,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 14
+          },
+          {
+            "modul": 64,
+            "curs": 4,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 15
+          },
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 44,
+            "curs": 2,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 24,
+            "curs": 0,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 51,
+            "curs": 3,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          {
+            "modul": 64,
+            "curs": 4,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 15
+          },
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 44,
+            "curs": 2,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          {
+            "modul": 70,
+            "curs": 4,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 6,
+            "curs": 0,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 51,
+            "curs": 3,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 13
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 44,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          {
+            "modul": 70,
+            "curs": 4,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 2
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 22,
+            "curs": 0,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          {
+            "modul": 69,
+            "curs": 3,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "modul": 63,
+            "curs": 4,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 0
+          },
+          null,
+          null,
+          {
+            "modul": 18,
+            "curs": 0,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 3
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 71,
+            "curs": 2,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 8
+          },
+          null,
+          {
+            "modul": 69,
+            "curs": 3,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 10
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          {
+            "modul": 32,
+            "curs": 5,
+            "aula": 5,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 1
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 40,
+            "curs": 6,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          {
+            "modul": 35,
+            "curs": 5,
+            "aula": 6,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 11,
+            "curs": 7,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 40,
+            "curs": 6,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          {
+            "modul": 34,
+            "curs": 5,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          {
+            "modul": 31,
+            "curs": 1,
+            "aula": 7,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          {
+            "modul": 14,
+            "curs": 7,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 13,
+            "curs": 7,
+            "aula": 1,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 84,
+            "curs": 6,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          {
+            "modul": 37,
+            "curs": 5,
+            "aula": 7,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          {
+            "modul": 31,
+            "curs": 1,
+            "aula": 9,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          {
+            "modul": 10,
+            "curs": 7,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 11,
+            "curs": 7,
+            "aula": 6,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 33,
+            "curs": 5,
+            "aula": 9,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          {
+            "modul": 38,
+            "curs": 6,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          {
+            "modul": 34,
+            "curs": 5,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 7
+          },
+          null,
+          {
+            "modul": 7,
+            "curs": 1,
+            "aula": 8,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          {
+            "modul": 10,
+            "curs": 7,
+            "aula": 2,
+            "subgrup": 1,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          {
+            "modul": 11,
+            "curs": 7,
+            "aula": 5,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 12
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          {
+            "modul": 39,
+            "curs": 6,
+            "aula": 5,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 4
+          },
+          {
+            "modul": 78,
+            "curs": 5,
+            "aula": 1,
+            "subgrup": 3,
+            "suport": false,
+            "simultani": false,
+            "profe": 5
+          },
+          null,
+          null,
+          null,
+          {
+            "modul": 29,
+            "curs": 1,
+            "aula": 7,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 9
+          },
+          null,
+          {
+            "modul": 14,
+            "curs": 7,
+            "aula": 0,
+            "subgrup": 2,
+            "suport": false,
+            "simultani": false,
+            "profe": 11
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ]
+    ],
+    [],
+    [],
+    [],
+    []
+  ]
+}

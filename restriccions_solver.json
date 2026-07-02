@@ -1,0 +1,128 @@
+{
+  "restriccions_adicionals": {
+    "horari_general": {
+      "dies_setmana": {
+        "dilluns": 0,
+        "dimarts": 1,
+        "dimecres": 2,
+        "dijous": 3,
+        "divendres": 4
+      },
+      "hores_dia": {
+        "inici": 8,
+        "final": 21,
+        "total_hores": 11,
+        "mapejat_hores": {
+          "0": "08:00-09:00",
+          "1": "09:00-10:00", 
+          "2": "10:00-11:00",
+          "3": "11:00-12:00",
+          "4": "12:00-13:00",
+          "5": "13:00-14:00",
+          "6": "14:00-15:00",
+          "7": "15:00-16:00",
+          "8": "16:00-17:00",
+          "9": "17:00-18:00",
+          "10": "18:00-19:00",
+          "11": "19:00-20:00",
+          "12": "20:00-21:00"
+        }
+      }
+    },
+    "classes_divisibles": {
+      "descripcio": "Una classe pot ser de 4 hores i es pot partir sempre de 1 hora en 1 hora",
+      "unitat_minima": 1,
+      "divisibilitat": "sempre_possible"
+    },
+    "tipus_classes": {
+      "teoria": {
+        "descripcio": "Hores de teoria amb el grup sencer",
+        "grup_sencer": true,
+        "mida_grup": "complert"
+      },
+      "desdoblades": {
+        "descripcio": "Hores desdoblades - grup partit en dos mig grup",
+        "opcions": [
+          {
+            "tipus": "dos_professors_una_aula",
+            "professors": 2,
+            "aules": 1,
+            "grups": 1
+          },
+          {
+            "tipus": "un_professor_per_mig_grup",
+            "professors": 1,
+            "aules": 1,
+            "grups": 0.5
+          }
+        ]
+      }
+    },
+    "professors_suport": {
+      "descripcio": "Algunes hores de classe pot venir un professor de suport",
+      "identificacio": "camp_suport_true",
+      "simultaneitat": "possible"
+    },
+    "capacitat_aules": {
+      "descripcio": "Una aula te mida, i hi ha de cabre el grup sencer",
+      "validacio_requerida": true,
+      "grup_sencer_prioritat": true
+    },
+    "assignatures_especials": {
+      "fol_angles": {
+        "descripcio": "FOL i angles que ha de coincidir els 3 grups a la vegada han de fer-ho",
+        "grups_simultaneos": 3,
+        "coordinacio_requerida": true,
+        "identificacio_fol": "nom_conte_fol",
+        "identificacio_angles": "codi_AN-"
+      }
+    },
+    "restriccions_tutoria": {
+      "descripcio": "Tutoria no pot ser mai ni ultima hora del dia ni primera",
+      "hora_primera_prohibida": true,
+      "hora_ultima_prohibida": true,
+      "excepcions": []
+    },
+    "restriccions_fol_angles": {
+      "descripcio": "FOL i angles sempre han d'anar a primera hora o ultima del dia",
+      "posicions_permeses": ["primera_hora_dia", "ultima_hora_dia"],
+      "condicio": "si es comensa aquell dia a les 12, doncs aquella es la primera hora"
+    },
+    "agrupacio_assignatures": {
+      "sostenibilitat_digitalizacio": {
+        "descripcio": "Sostenibilitat i digitalitzacio s'ha de poder agrupar amb una altre assignatura",
+        "exemple": "si digitalitzacio fos 1 hora i movil 3, passaria a ser 4 hores de movil",
+        "identificacio_sostenibilitat": "nom_conte_sostenibilitat_o_codi_SO-",
+        "identificacio_digitalitzacio": "nom_conte_digitalitzacio_o_codi_DI-",
+        "agrupacio_amb": "assignatura_indicada",
+        "fusio_hores": true
+      }
+    },
+    "codificacio_desiderata": {
+      "descripcio": "Codificacio dels desiderata dels professors",
+      "tipus_1": {
+        "descripcio": "Prefereix que no",
+        "prioritat": "baixa",
+        "penalitzacio": "menor"
+      },
+      "tipus_2": {
+        "descripcio": "No disponible",
+        "prioritat": "alta", 
+        "penalitzacio": "major_o_prohibit"
+      }
+    },
+    "subgrups": {
+      "descripcio": "Codificacio dels subgrups",
+      "subgrup_1": "primer_mig_grup",
+      "subgrup_2": "segon_mig_grup", 
+      "subgrup_3": "grup_sencer",
+      "relacions": "subgrup_3_inclou_subgrup_1_i_2"
+    },
+    "simultaneitat": {
+      "descripcio": "Classes simultànies amb el camp simultani=true",
+      "coordinacio_requerida": true,
+      "mateixa_hora": true,
+      "possibles_aules_diferents": true
+    }
+    
+}
