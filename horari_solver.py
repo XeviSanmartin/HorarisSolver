@@ -101,7 +101,10 @@ class HorariData:
         """Carrega les dades del fitxer JSON"""
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
+        self.carrega_dades(data)
+
+    def carrega_dades(self, data: dict):
+        """Carrega les dades a partir d'un diccionari amb format Solver.json"""
         # Carrega professors
         for prof_data in data.get('professors', []):
             if prof_data.get('actiu', True):
@@ -331,6 +334,15 @@ class HorariData:
     
     def exporta_dades_processades(self, output_path: str):
         """Exporta les dades processades a un fitxer JSON per al solver"""
+        dades_solver = self.genera_dades_processades()
+
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(dades_solver, f, ensure_ascii=False, indent=2)
+
+        print(f"Dades processades exportades a: {output_path}")
+
+    def genera_dades_processades(self) -> dict:
+        """Genera el diccionari de dades processades per al solver"""
         dades_solver = {
             'professors': [
                 {
@@ -410,11 +422,8 @@ class HorariData:
                 'horaris_projectes': self.horaris_projectes
             }
         }
-        
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(dades_solver, f, ensure_ascii=False, indent=2)
-        
-        print(f"Dades processades exportades a: {output_path}")
+
+        return dades_solver
     
     def valida_dades(self) -> List[str]:
         """Valida les dades carregades i retorna una llista d'errors/advertiments"""

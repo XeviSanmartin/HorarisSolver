@@ -20,6 +20,9 @@ class HorariSolver:
         
         # Inicialització del model
         self.model = cp_model.CpModel()
+
+        # Estat de l'última resolució ('OPTIMAL', 'FEASIBLE', 'INFEASIBLE', 'UNKNOWN', 'MODEL_INVALID')
+        self.ultim_estat = None
         
         # Variables de decisió
         self.vars_assignacio = {}  # (modul, professor, dia, hora, aula, subgrup)
@@ -30,11 +33,14 @@ class HorariSolver:
         self.slots_ocupats_aula = {}  # (aula, dia, hora) -> bool
         self.slots_ocupats_curs = {}  # (curs, dia, hora) -> bool
 
-    def carregar_dades(self, dades_path: str):
-        """Carrega les dades del fitxer processat"""
-        with open(dades_path, 'r', encoding='utf-8') as f:
-            dades = json.load(f)
-        
+    def carregar_dades(self, dades_path):
+        """Carrega les dades del fitxer processat (path) o directament d'un dict"""
+        if isinstance(dades_path, dict):
+            dades = dades_path
+        else:
+            with open(dades_path, 'r', encoding='utf-8') as f:
+                dades = json.load(f)
+
         self.professors = dades['professors']
         self.moduls = dades['moduls']
         self.cursos = dades['cursos']
@@ -1119,23 +1125,31 @@ class HorariSolver:
 
 
                 
-    def resoldre(self):
-        """Resol el model i retorna la solució"""
+    def resoldre(self, max_time_seconds: float = 900, num_workers: int = 8,
+                 log_search_progress: bool = True, output_path: str = 'solucio_horaris.json'):
+        """Resol el model i retorna la solució.
+
+        Args:
+            max_time_seconds: límit de temps del solver CP-SAT.
+            num_workers: threads de cerca paral·lela.
+            log_search_progress: mostrar el log de cerca d'OR-Tools.
+            output_path: fitxer on guardar la solució (None = no guardar).
+        """
 
         print("Iniciant la resolució del model...")
 
 
 
-        
+
         # Crear solucionador
         solver = cp_model.CpSolver()
-        
+
         # Configuració
         solver.parameters.optimize_with_core = True
         solver.parameters.linearization_level = 2
-        solver.parameters.max_time_in_seconds = 900  # Límit de 1 minut
-        solver.parameters.log_search_progress = True
-        solver.parameters.num_search_workers = 8  # Usar múltiples threads (ajustar según CPU)
+        solver.parameters.max_time_in_seconds = max_time_seconds
+        solver.parameters.log_search_progress = log_search_progress
+        solver.parameters.num_search_workers = num_workers
         solver.parameters.cp_model_presolve = True
 
         # Resoldre el model
@@ -1144,6 +1158,7 @@ class HorariSolver:
         end_time = time.time()
         
         if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+            self.ultim_estat = 'OPTIMAL' if status == cp_model.OPTIMAL else 'FEASIBLE'
             print(f"Solució trobada en {end_time - start_time:.2f} segons")
             
             # Processar la solució
@@ -1154,7 +1169,9 @@ class HorariSolver:
                 'stats': {
                     'temps_resolucio': end_time - start_time,
                     'conflictes': solver.NumConflicts(),
-                    'branques': solver.NumBranches()
+                    'branques': solver.NumBranches(),
+                    'estat': 'OPTIMAL' if status == cp_model.OPTIMAL else 'FEASIBLE',
+                    'objectiu': solver.ObjectiveValue()
                 }
             }
             
@@ -1202,26 +1219,29 @@ class HorariSolver:
                         })
             
             # Guardar solució en JSON
-            with open('solucio_horaris.json', 'w', encoding='utf-8') as f:
-                json.dump(solucio, f, ensure_ascii=False, indent=2)
-            
-            print("Solució guardada a 'solucio_horaris.json'")
+            if output_path:
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    json.dump(solucio, f, ensure_ascii=False, indent=2)
+                print(f"Solució guardada a '{output_path}'")
             return solucio
         else:
             print("No s'ha trobat cap solució")
             if status == cp_model.MODEL_INVALID:
+                self.ultim_estat = 'MODEL_INVALID'
                 print("El model és invàlid")
             elif status == cp_model.INFEASIBLE:
+                self.ultim_estat = 'INFEASIBLE'
                 print("El model és infactible")
-            elif status == cp_model.UNKNOWN:
+            else:
+                self.ultim_estat = 'UNKNOWN'
                 print("Estat desconegut")
             return None
 
-    def executar(self):
+    def executar(self, **kwargs):
         """Mètode principal per executar tot el procés"""
         self.crear_variables()
         self.afegir_restriccions()
-        return self.resoldre()
+        return self.resoldre(**kwargs)
 
     def mostrar_horari_curs(self, solucio, curs_idx):
         """Mostra l'horari d'un curs específic"""
@@ -1398,20 +1418,26 @@ def main():
         traceback.print_exc()
 
 
-def genera_json_solucio_compatible(solucio, dades_solver_path):
-    """Genera un JSON amb exactament el mateix format que Solver.json"""
+def genera_json_solucio_compatible(solucio, dades_solver_path=None, template=None,
+                                   output_path='solucio_horaris_compatible.hor'):
+    """Genera un JSON amb exactament el mateix format que Solver.json.
+
+    Args:
+        solucio: solució retornada per HorariSolver.resoldre().
+        dades_solver_path: (obsolet, es mantenia per compatibilitat; no s'usa).
+        template: dict amb format Solver.json a usar com a plantilla.
+                  Si és None, es carrega 'Buit.json'.
+        output_path: fitxer de sortida (None = no guardar).
+    """
     import json
     import copy
     import time
-    
-    # Carregar les dades del solver originals
-    with open(dades_solver_path, 'r', encoding='utf-8') as f:
-        dades = json.load(f)
 
-    # Carregar Buit.json per obtenir l'estructura exacta
-    with open('Buit.json', 'r', encoding='utf-8') as f:
-        template = json.load(f)
-    
+    # Carregar la plantilla per obtenir l'estructura exacta
+    if template is None:
+        with open('Buit.json', 'r', encoding='utf-8') as f:
+            template = json.load(f)
+
     # Crear una còpia exacta de l'estructura de Solver.json
     output = copy.deepcopy(template)
     
@@ -1493,10 +1519,10 @@ def genera_json_solucio_compatible(solucio, dades_solver_path):
     
     
     # Guardar a l'arxiu
-    with open('solucio_horaris_compatible.hor', 'w', encoding='utf-8') as f:
-        json.dump(output, f, ensure_ascii=False, indent=2)
-    
-    print("Solució guardada amb format exacte de Solver.json a 'solucio_horaris_compatible.json'")
+    if output_path:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(output, f, ensure_ascii=False, indent=2)
+        print(f"Solució guardada amb format exacte de Solver.json a '{output_path}'")
     return output
 
 if __name__ == "__main__":
