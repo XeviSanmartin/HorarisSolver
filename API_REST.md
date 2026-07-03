@@ -385,6 +385,9 @@ L'API està desplegada a **Vercel** com a funció serverless Python.
 
 ## Desplegament en servidor propi (Docker)
 
+> Guia pas a pas completa (Windows local amb Docker Desktop, VM del Proxmox,
+> gestió del contenidor i resolució de problemes): [`DESPLEGAMENT.md`](DESPLEGAMENT.md).
+
 Per a resolucions llargues i per al mode asíncron (`/api/jobs`), desplegueu
 l'API en una màquina pròpia (p. ex. una VM del Proxmox amb Docker):
 
