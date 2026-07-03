@@ -7,7 +7,7 @@
       "name": "HorarisSolver",
       "url": "https://github.com/XeviSanmartin/HorarisSolver"
     },
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "paths": {
     "/api/health": {
@@ -302,6 +302,12 @@
             "type": "array",
             "title": "Horaris Projectes",
             "description": "Slots permesos per als mòduls de projecte."
+          },
+          "horari": {
+            "items": {},
+            "type": "array",
+            "title": "Horari",
+            "description": "Hores pre-assignades a l'editor, que el solver pot mantenir inamovibles si s'activa `opcions.fixar_horari` a /api/solve. Format de l'editor: `horari[periode][dia][hora]` → llista de cel·les (null als buits), on cada cel·la és `{modul, curs, aula, subgrup, suport, simultani, profe}` amb índexs de les entitats. També s'accepta el format pla `horari[dia][hora]` → cel·la o null. Les cel·les incoherents (professor inexistent, mòdul no assignat, slot fora de rang...) es descarten amb un advertiment."
           }
         },
         "additionalProperties": true,
@@ -637,6 +643,19 @@
             "title": "Incloure Compatible",
             "description": "Si és cert, la resposta inclou `solucio_compatible`: la solució en format Solver.json, reimportable a l'editor Switch2.",
             "default": false
+          },
+          "fixar_horari": {
+            "type": "boolean",
+            "title": "Fixar Horari",
+            "description": "Si és cert, les hores pre-assignades del camp `dades.horari` queden inamovibles: el solver les manté a la seva posició exacta i només col·loca la resta. Redueix l'espai de cerca i el temps de resolució. Si les hores fixades contradiuen alguna restricció dura, el resultat serà INFEASIBLE.",
+            "default": false
+          },
+          "periode": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Periode",
+            "description": "Període del camp `dades.horari` del qual s'extreuen les hores pre-assignades (l'editor n'exporta 5; per defecte el 0).",
+            "default": 0
           }
         },
         "type": "object",
@@ -663,6 +682,13 @@
         "properties": {
           "dades": {
             "$ref": "#/components/schemas/DadesSolver"
+          },
+          "periode": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Periode",
+            "description": "Període del camp `dades.horari` del qual s'extreuen les hores pre-assignades (l'editor n'exporta 5; per defecte el 0).",
+            "default": 0
           }
         },
         "type": "object",
@@ -768,7 +794,7 @@
             "type": "string",
             "title": "Versio Api",
             "examples": [
-              "1.1.0"
+              "1.2.0"
             ]
           },
           "max_temps_solver": {

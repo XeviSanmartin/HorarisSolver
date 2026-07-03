@@ -32,7 +32,7 @@ from Solver import HorariSolver, genera_json_solucio_compatible
 # (configurat a vercel.json); deixem marge per al preprocessament i la resposta.
 MAX_TEMPS_SOLVER = float(os.environ.get('MAX_TEMPS_SOLVER', 280))
 
-VERSIO_API = '1.1.0'
+VERSIO_API = '1.2.0'
 
 DESCRIPCIO = """
 Servei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).
@@ -244,6 +244,15 @@ class DadesSolver(BaseModel):
         description="Índexs de mòduls de projecte final: només poden anar als slots de `horaris_projectes`.")
     horaris_projectes: list[SlotHorari] = Field(
         default_factory=list, description='Slots permesos per als mòduls de projecte.')
+    horari: list = Field(
+        default_factory=list,
+        description="Hores pre-assignades a l'editor, que el solver pot mantenir inamovibles "
+                    "si s'activa `opcions.fixar_horari` a /api/solve. Format de l'editor: "
+                    "`horari[periode][dia][hora]` → llista de cel·les (null als buits), on cada "
+                    "cel·la és `{modul, curs, aula, subgrup, suport, simultani, profe}` amb "
+                    "índexs de les entitats. També s'accepta el format pla `horari[dia][hora]` → "
+                    "cel·la o null. Les cel·les incoherents (professor inexistent, mòdul no "
+                    "assignat, slot fora de rang...) es descarten amb un advertiment.")
 
     def com_a_dict(self) -> dict:
         """Serialitza amb els noms de camp originals de Solver.json (p. ex. `7hores`).
@@ -272,6 +281,17 @@ class OpcionsSolve(BaseModel):
         default=False,
         description='Si és cert, la resposta inclou `solucio_compatible`: la solució en '
                     'format Solver.json, reimportable a l\'editor Switch2.')
+    fixar_horari: bool = Field(
+        default=False,
+        description='Si és cert, les hores pre-assignades del camp `dades.horari` queden '
+                    'inamovibles: el solver les manté a la seva posició exacta i només '
+                    'col·loca la resta. Redueix l\'espai de cerca i el temps de resolució. '
+                    'Si les hores fixades contradiuen alguna restricció dura, el resultat '
+                    'serà INFEASIBLE.')
+    periode: int = Field(
+        default=0, ge=0,
+        description='Període del camp `dades.horari` del qual s\'extreuen les hores '
+                    'pre-assignades (l\'editor n\'exporta 5; per defecte el 0).')
 
 
 class PeticioSolve(BaseModel):
@@ -283,6 +303,10 @@ class PeticioSolve(BaseModel):
 class PeticioValidate(BaseModel):
     """Cos de la petició de /api/validate i /api/preprocess."""
     dades: DadesSolver
+    periode: int = Field(
+        default=0, ge=0,
+        description='Període del camp `dades.horari` del qual s\'extreuen les hores '
+                    'pre-assignades (l\'editor n\'exporta 5; per defecte el 0).')
 
 
 class RespostaHealth(BaseModel):
@@ -395,7 +419,7 @@ def _silenci():
         yield buf
 
 
-def _preprocessa(dades: DadesSolver) -> tuple[HorariData, list[str]]:
+def _preprocessa(dades: DadesSolver, periode: int = 0) -> tuple[HorariData, list[str]]:
     """Carrega i preprocessa dades amb format Solver.json.
 
     Retorna (HorariData, advertiments). Llança HTTPException 422 si les dades
@@ -404,7 +428,7 @@ def _preprocessa(dades: DadesSolver) -> tuple[HorariData, list[str]]:
     try:
         hd = HorariData()
         with _silenci():
-            hd.carrega_dades(dades.com_a_dict())
+            hd.carrega_dades(dades.com_a_dict(), periode=periode)
         advertiments = hd.valida_dades()
         return hd, advertiments
     except (KeyError, TypeError, AttributeError, ValueError, IndexError) as e:
@@ -456,7 +480,7 @@ def validate(peticio: PeticioValidate) -> RespostaValidate:
     problemes abans de llançar una resolució. Els `advertiments` són informatius
     i **no** impedeixen cridar `/api/solve`.
     """
-    hd, advertiments = _preprocessa(peticio.dades)
+    hd, advertiments = _preprocessa(peticio.dades, periode=peticio.periode)
     stats = hd.get_estadistiques()
     # subgrups_per_curs conté sets; fer-ho serialitzable
     stats['subgrups_per_curs'] = {str(k): sorted(v) for k, v in stats['subgrups_per_curs'].items()}
@@ -477,7 +501,7 @@ def preprocess(peticio: PeticioValidate) -> RespostaPreprocess:
     (FOL, anglès, sostenibilitat, digitalització), tutories, agrupacions
     fusionables i subgrups per curs.
     """
-    hd, advertiments = _preprocessa(peticio.dades)
+    hd, advertiments = _preprocessa(peticio.dades, periode=peticio.periode)
     return RespostaPreprocess(
         dades_processades=hd.genera_dades_processades(),
         advertiments=advertiments,
@@ -496,13 +520,24 @@ def solve(peticio: PeticioSolve) -> RespostaSolve:
     opcions = peticio.opcions
     max_time = min(opcions.max_time_seconds, MAX_TEMPS_SOLVER)
 
-    hd, advertiments = _preprocessa(peticio.dades)
+    hd, advertiments = _preprocessa(peticio.dades, periode=opcions.periode)
     dades_processades = hd.genera_dades_processades()
+
+    hores_fixades = len(dades_processades.get('horari_fixat', []))
+    if hores_fixades and opcions.fixar_horari:
+        advertiments.append(
+            f"S'han fixat {hores_fixades} hores pre-assignades del període {opcions.periode}: "
+            f"el solver les manté inamovibles.")
+    elif hores_fixades:
+        advertiments.append(
+            f"S'han detectat {hores_fixades} hores pre-assignades (període {opcions.periode}) "
+            f"però `opcions.fixar_horari` és fals: el solver les ignora.")
 
     try:
         with _silenci():
             solver = HorariSolver(dades_processades)
             solucio = solver.executar(
+                fixar_horari=opcions.fixar_horari,
                 max_time_seconds=max_time,
                 num_workers=opcions.num_workers,
                 log_search_progress=False,

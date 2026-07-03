@@ -96,9 +96,13 @@ Valida un `Solver.json` **sense construir ni resoldre el model**. És ràpid
 
 ```json
 {
-  "dades": { ...contingut complet de Solver.json... }
+  "dades": { ...contingut complet de Solver.json... },
+  "periode": 0
 }
 ```
+
+`periode` (opcional, per defecte `0`) indica de quin període del camp
+`dades.horari` s'extreuen les hores pre-assignades.
 
 **Resposta `200`:**
 
@@ -121,7 +125,8 @@ Valida un `Solver.json` **sense construir ni resoldre el model**. És ràpid
     "moduls_suport": 1,
     "moduls_simultaneos": 2,
     "tutories": 8,
-    "subgrups_per_curs": { "0": [1, 2, 3], "1": [3] }
+    "subgrups_per_curs": { "0": [1, 2, 3], "1": [3] },
+    "hores_fixades": 238
   }
 }
 ```
@@ -191,6 +196,8 @@ resolució → formatació de la solució.
 | `max_time_seconds` | float > 0 | `60` | Temps màxim de cerca. El servidor l'acota al seu límit (`max_temps_solver` de `/api/health`) |
 | `num_workers` | int 1–16 | `4` | Threads de cerca paral·lela de CP-SAT |
 | `incloure_compatible` | bool | `false` | Afegeix `solucio_compatible`: la solució en format `Solver.json`, reimportable a l'editor Switch2 |
+| `fixar_horari` | bool | `false` | Manté **inamovibles** les hores pre-assignades del camp `dades.horari` (les col·locades a mà a l'editor): el solver només col·loca la resta. Redueix l'espai de cerca i el temps de resolució |
+| `periode` | int ≥ 0 | `0` | Període del camp `dades.horari` del qual s'extreuen les hores pre-assignades (l'editor n'exporta 5) |
 
 El camp `opcions` és opcional (s'apliquen els valors per defecte).
 
@@ -227,6 +234,25 @@ El camp `opcions` és opcional (s'apliquen els valors per defecte).
 **Sobre `stats.objectiu`:** el solver minimitza
 `10 × hores_mortes + 20 × preferències_no_respectades` (desiderata `tipus: 1`).
 Com més baix, millor és l'horari.
+
+**Sobre `fixar_horari` (hores inamovibles):** el flux recomanat és col·locar a
+mà a l'editor les hores que voleu garantir, exportar l'horari i cridar
+`/api/solve` amb `"fixar_horari": true`. El solver manté aquelles hores al seu
+slot exacte (professor, mòdul, subgrup i aula) i resol la resta al voltant.
+Consideracions:
+
+- Les cel·les incoherents (professor inexistent, mòdul no assignat, slot fora
+  de rang...) **es descarten amb un advertiment**, no bloquegen la resolució.
+  `/api/validate` les llista i informa d'`hores_fixades` a les estadístiques.
+- Les hores fixades han de complir les restriccions dures del solver (FOL i
+  anglès a primera/última hora, tutoria mai a primera ni última, cursos sense
+  forats...). Si les contradiuen, el resultat és `INFEASIBLE`.
+- Sense `fixar_horari` (per defecte), el camp `horari` s'ignora i la resposta
+  ho recorda amb un advertiment. Això manté el comportament històric amb
+  fitxers que porten l'horari sencer fet a mà.
+
+La guia completa (format, validacions, decisions de disseny) és a
+[`HORES_FIXADES.md`](HORES_FIXADES.md).
 
 **Estructura de `solucio`:** vegeu `DOC_API_SOLVER.md`, part 3
 (`horari[curs][dia][hora]`, `professors[prof][dia][hora]`, `aules[aula][dia][hora]`).
@@ -320,11 +346,15 @@ L'API està desplegada a **Vercel** com a funció serverless Python.
 
 ## Tests
 
-La suite (`tests/test_api.py`, 22 tests) cobreix:
+La suite (`tests/test_api.py`, 32 tests) cobreix:
 
 - **Endpoints**: health, redirecció a docs, OpenAPI, validate (dades reals,
   buides, invàlides), preprocess (estructura + **test de regressió** contra la
   sortida del pipeline CLI original).
+- **Hores pre-assignades**: extracció i normalització d'`horari_fixat`,
+  paràmetre `periode`, descarts amb advertiment, resolució amb `fixar_horari`
+  (cada hora fixada apareix exactament al seu slot), fixació impossible (→
+  `INFEASIBLE`) i comportament per defecte (s'ignoren amb avís).
 - **Casos límit de solve**: opcions invàlides, dades infactibles (→
   `INFEASIBLE`), temps de resolució d'1 segon.
 - **Invariants de la solució real** (es resol `Solver.json` de debò i es

@@ -48,6 +48,9 @@ class HorariSolver:
         self.especialitats = dades['especialitats']
         self.agrupacions = dades['agrupacions']
         self.config = dades['configuracio']
+        # Hores pre-assignades (normalitzades pel preprocessador) que es poden
+        # forçar amb executar(fixar_horari=True)
+        self.horari_fixat = dades.get('horari_fixat', [])
         
         # Índex per a accés ràpid
         self.modul_per_index = {m['index']: m for m in self.moduls if 'index' in m}
@@ -1237,10 +1240,55 @@ class HorariSolver:
                 print("Estat desconegut")
             return None
 
-    def executar(self, **kwargs):
-        """Mètode principal per executar tot el procés"""
+    def afegir_restriccions_horari_fixat(self):
+        """Força les hores pre-assignades (horari_fixat) a la seva posició exacta.
+
+        Cada entrada de horari_fixat és {professor, modul, subgrup, dia, hora, aula}
+        (aula -1 = qualsevol de les possibles). Si l'aula és concreta es fixa la
+        variable exacta; si no, es força que el mòdul passi en aquell slot en
+        alguna de les aules per a les quals existeix variable.
+        """
+        print(f"Afegint {len(self.horari_fixat)} hores pre-assignades com a restriccions...")
+
+        # Índex (modul, professor, dia, hora, subgrup) -> variables (una per aula)
+        vars_per_slot = {}
+        for (m, p, d, h, a, s), var in self.vars_assignacio.items():
+            vars_per_slot.setdefault((m, p, d, h, s), []).append(var)
+
+        fixades = 0
+        for fix in self.horari_fixat:
+            m, p, s = fix['modul'], fix['professor'], fix['subgrup']
+            d, h, a = fix['dia'], fix['hora'], fix.get('aula', -1)
+
+            if a != -1 and (m, p, d, h, a, s) in self.vars_assignacio:
+                self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 1)
+                fixades += 1
+            else:
+                candidates = vars_per_slot.get((m, p, d, h, s))
+                if candidates:
+                    self.model.Add(sum(candidates) == 1)
+                    fixades += 1
+                else:
+                    print(f"  AVÍS: no hi ha cap variable per fixar el mòdul {m} del "
+                          f"professor {p} (dia {d}, hora {h}, subgrup {s}); es descarta")
+
+        print(f"S'han fixat {fixades} hores pre-assignades")
+        return fixades
+
+    def executar(self, fixar_horari: bool = False, **kwargs):
+        """Mètode principal per executar tot el procés.
+
+        Args:
+            fixar_horari: si és cert i les dades contenen hores pre-assignades
+                (horari_fixat), queden forçades a la seva posició exacta.
+        """
         self.crear_variables()
         self.afegir_restriccions()
+        if fixar_horari and self.horari_fixat:
+            self.afegir_restriccions_horari_fixat()
+        elif self.horari_fixat:
+            print(f"AVÍS: hi ha {len(self.horari_fixat)} hores pre-assignades però "
+                  f"fixar_horari és fals: el solver les ignora")
         return self.resoldre(**kwargs)
 
     def mostrar_horari_curs(self, solucio, curs_idx):

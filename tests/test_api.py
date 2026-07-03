@@ -197,6 +197,150 @@ def test_preprocess_regressio():
 
 
 # ---------------------------------------------------------------------------
+# Horari pre-assignat (hores fixades)
+# ---------------------------------------------------------------------------
+
+def _matriu_horari_buida():
+    """Matriu d'un període en format editor: [dia][hora] -> llista de cel·les."""
+    return [[[] for _ in range(11)] for _ in range(5)]
+
+
+def test_preprocess_horari_fixat(dades_reals):
+    """El camp horari del Solver.json real (període 0) s'ha de normalitzar
+    a horari_fixat amb una entrada per cel·la ocupada vàlida."""
+    r = client.post('/api/preprocess', json={'dades': dades_reals})
+    assert r.status_code == 200
+    fixat = r.json()['dades_processades']['horari_fixat']
+    assert len(fixat) > 0
+    for fix in fixat:
+        assert set(fix) == {'professor', 'modul', 'subgrup', 'dia', 'hora', 'aula'}
+        assert 0 <= fix['dia'] <= 4
+        assert 0 <= fix['hora'] <= 10
+        assert fix['subgrup'] in (1, 2, 3)
+
+
+def test_preprocess_horari_fixat_periode_buit(dades_reals):
+    """Els períodes sense contingut no aporten cap hora fixada."""
+    r = client.post('/api/preprocess', json={'dades': dades_reals, 'periode': 1})
+    assert r.status_code == 200
+    assert r.json()['dades_processades']['horari_fixat'] == []
+
+
+def test_validate_estadistiques_hores_fixades(dades_reals):
+    r = client.post('/api/validate', json={'dades': dades_reals})
+    assert r.status_code == 200
+    est = r.json()['estadistiques']
+    assert est['hores_fixades'] > 0
+
+
+def test_validate_horari_fixat_invalid(dades_reals):
+    """Cel·les incoherents es descarten amb advertiment, sense error 422."""
+    dades = copy.deepcopy(dades_reals)
+    matriu = _matriu_horari_buida()
+    matriu[0][0] = [{'modul': 99999, 'curs': 0, 'aula': -1, 'subgrup': 3,
+                     'suport': False, 'simultani': False, 'profe': 99999}]
+    dades['horari'] = [matriu]
+    r = client.post('/api/validate', json={'dades': dades})
+    assert r.status_code == 200
+    cos = r.json()
+    assert cos['estadistiques']['hores_fixades'] == 0
+    assert any('Horari fixat' in a for a in cos['advertiments'])
+
+
+def test_solve_fixar_horari(solucio_real, dades_reals):
+    """Amb fixar_horari, cada hora pre-assignada apareix exactament al seu slot.
+
+    Es fixa la solució real completa: el solver només ha de verificar-la, i el
+    resultat ha de coincidir cel·la a cel·la amb l'horari fixat."""
+    matriu = _matriu_horari_buida()
+    for c_idx, curs in enumerate(solucio_real['solucio']['horari']):
+        for d, dia in enumerate(curs):
+            for h, classes in enumerate(dia):
+                for classe in classes:
+                    matriu[d][h].append({
+                        'modul': classe['modul_index'], 'curs': c_idx,
+                        'aula': classe['aula_index'], 'subgrup': classe['subgrup'],
+                        'suport': False, 'simultani': False,
+                        'profe': classe['professor_index'],
+                    })
+    dades = copy.deepcopy(dades_reals)
+    dades['horari'] = [matriu]
+
+    r = client.post('/api/solve', json={
+        'dades': dades,
+        'opcions': {'max_time_seconds': 60, 'num_workers': 8, 'fixar_horari': True},
+    })
+    assert r.status_code == 200, r.text
+    cos = r.json()
+    assert cos['estat'] in ('OPTIMAL', 'FEASIBLE'), cos['estat']
+    assert any('fixat' in a or 'fixades' in a for a in cos['advertiments'])
+
+    # Cada classe fixada és exactament al mateix lloc que a la solució original
+    for c_idx, curs in enumerate(solucio_real['solucio']['horari']):
+        for d, dia in enumerate(curs):
+            for h, classes in enumerate(dia):
+                esperades = {(c['modul_index'], c['professor_index'], c['subgrup'], c['aula_index'])
+                             for c in classes}
+                obtingudes = {(c['modul_index'], c['professor_index'], c['subgrup'], c['aula_index'])
+                              for c in cos['solucio']['horari'][c_idx][d][h]}
+                assert esperades == obtingudes, (
+                    f'Curs {c_idx} dia {d} hora {h}: fixat {esperades}, obtingut {obtingudes}'
+                )
+
+
+def test_solve_fixacio_impossible(solucio_real, dades_reals):
+    """Fixar més hores que les de l'assignació ha de donar INFEASIBLE."""
+    # Placements reals d'una assignació concreta (garanteixen slots vàlids);
+    # es deriven de la vista per curs, que porta professor_index explícit
+    placements = {}
+    for c, curs in enumerate(solucio_real['solucio']['horari']):
+        for d, dia in enumerate(curs):
+            for h, classes in enumerate(dia):
+                for cl in classes:
+                    clau = (cl['professor_index'], cl['modul_index'], cl['subgrup'], c)
+                    placements.setdefault(clau, []).append((d, h, cl))
+    (p_idx, _modul, _subgrup, c_idx), slots = next(iter(placements.items()))
+    classe = slots[0][2]
+
+    # Slot extra on el curs té classe (per passar la validació de disponibilitat)
+    ocupats = {(d, h) for d, h, _ in slots}
+    extra = next(
+        (d, h)
+        for d, dia in enumerate(solucio_real['solucio']['horari'][c_idx])
+        for h, classes in enumerate(dia)
+        if classes and (d, h) not in ocupats
+    )
+
+    matriu = _matriu_horari_buida()
+    cella = {'modul': classe['modul_index'], 'curs': c_idx, 'aula': classe['aula_index'],
+             'subgrup': classe['subgrup'], 'suport': False, 'simultani': False, 'profe': p_idx}
+    for d, h, _ in slots:
+        matriu[d][h].append(dict(cella))
+    matriu[extra[0]][extra[1]].append(dict(cella))
+
+    dades = copy.deepcopy(dades_reals)
+    dades['horari'] = [matriu]
+    r = client.post('/api/solve', json={
+        'dades': dades,
+        'opcions': {'max_time_seconds': 30, 'num_workers': 8, 'fixar_horari': True},
+    })
+    assert r.status_code == 200, r.text
+    cos = r.json()
+    assert cos['estat'] == 'INFEASIBLE', cos['estat']
+    assert any('infactible' in a for a in cos['advertiments'])
+
+
+def test_solve_sense_fixar_ignora_horari(dades_reals):
+    """Sense opcions.fixar_horari, les hores detectades s'ignoren (amb avís)."""
+    r = client.post('/api/solve', json={
+        'dades': dades_reals,
+        'opcions': {'max_time_seconds': 1, 'num_workers': 8},
+    })
+    assert r.status_code == 200
+    assert any('ignora' in a for a in r.json()['advertiments'])
+
+
+# ---------------------------------------------------------------------------
 # /api/solve — casos d'error i límits
 # ---------------------------------------------------------------------------
 

@@ -92,19 +92,29 @@ class HorariData:
         self.moduls_projectes: Set[int] = set()
         self.horaris_projectes: List[Dict] = []
 
+        # Hores pre-assignades (camp "horari" del Solver.json) que el solver
+        # ha de mantenir inamovibles, ja normalitzades i validades
+        self.horari_fixat: List[Dict] = []
+        self.advertiments_horari_fixat: List[str] = []
+
 
         # Hores disponibles (dilluns=0 a divendres=4, de 8h a 21h = hores 0 a 12)
         self.dies = 5  # dilluns a divendres
         self.hores_per_dia = 11  # de 8:00 a 21:00 (11 hores)
 
-    def carrega_json(self, json_path: str):
+    def carrega_json(self, json_path: str, periode: int = 0):
         """Carrega les dades del fitxer JSON"""
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        self.carrega_dades(data)
+        self.carrega_dades(data, periode=periode)
 
-    def carrega_dades(self, data: dict):
-        """Carrega les dades a partir d'un diccionari amb format Solver.json"""
+    def carrega_dades(self, data: dict, periode: int = 0):
+        """Carrega les dades a partir d'un diccionari amb format Solver.json
+
+        Args:
+            periode: període del camp "horari" del qual s'extreuen les hores
+                pre-assignades (l'editor exporta 5 períodes; per defecte el 0).
+        """
         # Carrega professors
         for prof_data in data.get('professors', []):
             if prof_data.get('actiu', True):
@@ -249,12 +259,11 @@ class HorariData:
         
         # Analitzar subgrups
         self._analitza_subgrups()
-        
-        
-        
-        
-    
-        
+
+        # Carregar hores pre-assignades (cal fer-ho al final: la validació
+        # necessita professors, mòduls, cursos i aules ja carregats)
+        self._carrega_horari_fixat(data.get('horari') or [], periode)
+
         print(f"Carregades dades: {len(self.professors)} professors, {len(self.moduls)} mòduls, {len(self.cursos)} cursos, {len(self.aules)} aules")
     
     def _analitza_subgrups(self):
@@ -270,6 +279,163 @@ class HorariData:
                         if curs_modul != -1:
                             self.subgrups_per_curs[curs_modul].add(modul_assign['subgrup'])
     
+    def _carrega_horari_fixat(self, horari: list, periode: int):
+        """Extreu i valida les hores pre-assignades del camp "horari".
+
+        Accepta els dos formats coneguts:
+        - Export de l'editor: horari[periode][dia][hora] -> llista de cel·les
+          (una posició per professor, amb null als buits).
+        - Format pla: horari[dia][hora] -> cel·la (dict o null).
+
+        Cada cel·la és {modul, curs, aula, subgrup, suport, simultani, profe}.
+        Les cel·les vàlides es normalitzen a self.horari_fixat; les invàlides
+        es descarten amb un advertiment a self.advertiments_horari_fixat.
+        """
+        self.horari_fixat = []
+        self.advertiments_horari_fixat = []
+        if not horari:
+            return
+        avis = self.advertiments_horari_fixat.append
+
+        # Detecció de format: en el format de l'editor les cel·les (llistes)
+        # apareixen al tercer nivell; en el pla, els dicts al segon
+        format_editor = True
+        trobat = False
+        for nivell1 in horari:
+            if not isinstance(nivell1, list):
+                continue
+            for nivell2 in nivell1:
+                if isinstance(nivell2, dict):
+                    format_editor = False
+                    trobat = True
+                elif isinstance(nivell2, list):
+                    trobat = True
+                if trobat:
+                    break
+            if trobat:
+                break
+
+        if format_editor:
+            if periode >= len(horari):
+                avis(f"Horari fixat: el període {periode} no existeix a l'horari "
+                     f"(només n'hi ha {len(horari)}); no es fixa cap hora")
+                return
+            matriu = horari[periode]
+        else:
+            matriu = horari
+
+        for dia_idx, dia in enumerate(matriu):
+            if not isinstance(dia, list):
+                continue
+            for hora_idx, cella in enumerate(dia):
+                slots = cella if isinstance(cella, list) else [cella]
+                for slot in slots:
+                    if isinstance(slot, dict):
+                        self._afegeix_hora_fixada(dia_idx, hora_idx, slot)
+
+        # Un professor no pot tenir dues hores fixades al mateix slot
+        vists = set()
+        depurats = []
+        for fix in self.horari_fixat:
+            clau = (fix['professor'], fix['dia'], fix['hora'])
+            if clau in vists:
+                avis(f"Horari fixat (dia {fix['dia']}, hora {fix['hora']}): el professor "
+                     f"{fix['professor']} ja té una hora fixada en aquest slot; es descarta la repetida")
+                continue
+            vists.add(clau)
+            depurats.append(fix)
+        self.horari_fixat = depurats
+
+        # No es poden fixar més hores que les que té l'assignació
+        recompte = defaultdict(int)
+        for fix in self.horari_fixat:
+            recompte[(fix['professor'], fix['modul'], fix['subgrup'])] += 1
+        for (p_idx, m_idx, subgrup), n in recompte.items():
+            prof = self.professor_per_index[p_idx]
+            hores = sum(ma.get('hores', 0) for ma in prof.moduls
+                        if ma.get('index') == m_idx and ma.get('subgrup', 3) == subgrup)
+            if n > hores:
+                avis(f"Horari fixat: es fixen {n} hores del mòdul {m_idx} per a {prof.nom} "
+                     f"(subgrup {subgrup}) però l'assignació només en té {hores}: "
+                     f"l'horari serà infactible")
+
+        if self.horari_fixat:
+            print(f"Carregades {len(self.horari_fixat)} hores pre-assignades (període {periode})")
+
+    def _afegeix_hora_fixada(self, dia: int, hora: int, cella: Dict):
+        """Valida una cel·la pre-assignada i, si és coherent, l'afegeix a horari_fixat"""
+        avis = self.advertiments_horari_fixat.append
+        p_idx = cella.get('profe', cella.get('professor', -1))
+        m_idx = cella.get('modul', -1)
+        subgrup = cella.get('subgrup', 3)
+        aula = cella.get('aula', -1)
+        lloc = f"dia {dia}, hora {hora}"
+
+        if dia >= self.dies or hora >= self.hores_per_dia:
+            avis(f"Horari fixat ({lloc}): fora del rang del solver "
+                 f"({self.dies} dies x {self.hores_per_dia} hores); es descarta")
+            return
+
+        prof = self.professor_per_index.get(p_idx)
+        if prof is None:
+            avis(f"Horari fixat ({lloc}): el professor {p_idx} no existeix o no està actiu; es descarta")
+            return
+
+        if m_idx not in self.modul_per_index:
+            avis(f"Horari fixat ({lloc}): el mòdul {m_idx} no existeix; es descarta")
+            return
+
+        assignacions = [ma for ma in prof.moduls
+                        if ma.get('index') == m_idx and ma.get('subgrup', 3) == subgrup]
+        if not assignacions:
+            avis(f"Horari fixat ({lloc}): {prof.nom} no té assignat el mòdul {m_idx} "
+                 f"amb subgrup {subgrup}; es descarta")
+            return
+
+        # El curs ha de tenir el slot dins del seu horari disponible
+        curs_idx = self.modul_per_index[m_idx].curs
+        curs = self.curs_per_index.get(curs_idx)
+        if curs is not None and curs.horari_disponible:
+            disponibles = {(s.get('dia'), s.get('hora')) for s in curs.horari_disponible}
+            if (dia, hora) not in disponibles:
+                avis(f"Horari fixat ({lloc}): el curs {curs.nom} no té aquest slot "
+                     f"al seu horari disponible; es descarta")
+                return
+
+        # Coherència amb l'aula preferida de l'assignació: el solver només crea
+        # variables per a l'aula preferida quan n'hi ha una
+        aula_preferida = assignacions[0].get('aula', -1)
+        if aula_preferida != -1 and aula not in (-1, aula_preferida):
+            avis(f"Horari fixat ({lloc}): l'aula {aula} no coincideix amb l'aula preferida "
+                 f"{aula_preferida} de l'assignació; es fixa amb l'aula preferida")
+        if aula_preferida != -1:
+            aula = aula_preferida
+
+        # Restriccions de l'aula (el solver no crea variables per combinacions invàlides)
+        if aula != -1:
+            aula_obj = self.aula_per_index.get(aula)
+            if aula_obj is None:
+                avis(f"Horari fixat ({lloc}): l'aula {aula} no existeix o no està activa; "
+                     f"es fixa l'hora sense aula concreta")
+                aula = -1
+            elif (aula_obj.nomes_subgrups and subgrup == 3) or (aula_obj.nomes_tardes and hora < 6):
+                if aula == aula_preferida:
+                    avis(f"Horari fixat ({lloc}): l'aula preferida {aula} no és compatible "
+                         f"amb aquest slot (només subgrups o només tardes); es descarta")
+                    return
+                avis(f"Horari fixat ({lloc}): l'aula {aula} no és compatible amb aquest slot; "
+                     f"es fixa l'hora sense aula concreta")
+                aula = -1
+
+        self.horari_fixat.append({
+            'professor': p_idx,
+            'modul': m_idx,
+            'subgrup': subgrup,
+            'dia': dia,
+            'hora': hora,
+            'aula': aula,
+        })
+
     def get_restriccions_professor(self, professor_index: int) -> Dict:
         """Obté les restriccions d'un professor"""
         if professor_index not in self.desiderata_per_professor:
@@ -406,6 +572,7 @@ class HorariData:
                 for esp in self.especialitats
             ],
             'agrupacions': self.get_moduls_agrupables(),
+            'horari_fixat': self.horari_fixat,
             'configuracio': {
                 'dies_setmana': self.dies,
                 'hores_per_dia': self.hores_per_dia,
@@ -454,7 +621,10 @@ class HorariData:
         
         if cursos_sense_tutoria:
             errors.append(f"Cursos sense tutoria: {', '.join(cursos_sense_tutoria)}")
-        
+
+        # Advertiments de la càrrega de l'horari pre-assignat
+        errors.extend(self.advertiments_horari_fixat)
+
         return errors
 
     def get_estadistiques(self) -> Dict:
@@ -471,7 +641,8 @@ class HorariData:
             'moduls_suport': len(self.moduls_suport),
             'moduls_simultaneos': len(self.moduls_simultaneos),
             'tutories': len(self.tutories_per_curs),
-            'subgrups_per_curs': dict(self.subgrups_per_curs)
+            'subgrups_per_curs': dict(self.subgrups_per_curs),
+            'hores_fixades': len(self.horari_fixat)
         }
         return stats
 

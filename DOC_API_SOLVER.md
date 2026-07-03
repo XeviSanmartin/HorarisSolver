@@ -290,9 +290,17 @@ Restricció de franges disponibles per al curs. Útil per a cursos de tarda o am
 
 ### `horari[]` (pre-assignat)
 
-Slots que ja estan fixats abans que el solver comenci. El solver **no els pot moure**.
+Hores que ja estan col·locades a l'editor abans que el solver comenci. Si a
+`/api/solve` s'activa `opcions.fixar_horari`, el solver **no les pot moure**:
+les manté a la seva posició exacta i només col·loca la resta d'hores. Això
+redueix l'espai de cerca i el temps de resolució.
 
-Format intern (usa índexs, no noms):
+**Format de l'editor (el que exporta l'app):** matriu de 4 nivells
+`horari[periode][dia][hora]` → llista de cel·les (una posició per professor,
+amb `null` als buits). L'editor exporta 5 períodes; el solver només fa servir
+el que indica `opcions.periode` (per defecte el 0).
+
+Cada cel·la ocupada és (usa índexs, no noms):
 
 ```json
 {
@@ -306,7 +314,18 @@ Format intern (usa índexs, no noms):
 }
 ```
 
-L'estructura és una matriu `[dia][hora]` on cada cel·la pot ser `null` (buit) o l'objecte anterior.
+També s'accepta el format pla `horari[dia][hora]` → cel·la (objecte o `null`).
+
+**Validació:** el preprocessador descarta amb un advertiment les cel·les
+incoherents (professor inexistent o inactiu, mòdul no assignat al professor amb
+aquell subgrup, slot fora del rang 0–10 o fora de l'horari disponible del curs,
+aula incompatible). Si l'aula de la cel·la no coincideix amb l'aula preferida de
+l'assignació, es fixa l'hora amb l'aula preferida. Si es fixen **més hores que
+les que té l'assignació**, s'avisa que l'horari serà infactible.
+
+> **Atenció:** les hores fixades han de complir totes les restriccions dures
+> (FOL/anglès a primera o última hora, tutoria mai a primera ni última, sense
+> forats al curs...). Si les contradiuen, el resultat serà `INFEASIBLE`.
 
 ---
 
@@ -363,6 +382,7 @@ Transforma el `Solver.json` afegint camps calculats que el solver OR-Tools neces
   "aules":         [...],
   "especialitats": [...],
   "agrupacions":   [...],
+  "horari_fixat":  [...],
   "configuracio":  { ... }
 }
 ```
@@ -395,6 +415,17 @@ Transforma el `Solver.json` afegint camps calculats que el solver OR-Tools neces
 
 ```json
 [[modul_idx_1, modul_idx_2], ...]
+```
+
+**horari_fixat** — hores pre-assignades del camp `horari` de l'entrada, ja
+normalitzades i validades (les cel·les incoherents s'han descartat amb un
+advertiment). `aula: -1` vol dir "qualsevol de les possibles":
+
+```json
+[
+  { "professor": 1, "modul": 61, "subgrup": 3, "dia": 0, "hora": 0, "aula": 6 },
+  ...
+]
 ```
 
 **configuracio**:
@@ -646,6 +677,7 @@ L'objecte classe inclou professor, mòdul i curs, però **no l'aula** (ja se sap
 | 15 | `horari_disponible` del curs: el curs no pot tenir classe fora d'aquells slots | Hard |
 | 16 | Aula `nomes_subgrups:true`: no pot tenir classes de grup sencer | Hard |
 | 17 | Aula `nomes_tardes:true`: no disponible abans de l'hora 6 (14:00) | Hard |
+| 18 | Hores pre-assignades (`horari` + `opcions.fixar_horari`): es mantenen al seu slot exacte | Hard (opcional) |
 
 ---
 
