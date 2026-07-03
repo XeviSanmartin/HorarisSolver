@@ -159,7 +159,9 @@ Catàleg de totes les assignatures. No inclou les hores ni els professors (això
   "codi":        "M6-0612",
   "nom":         "Desenvolupament entorn client",
   "curs":        6,
-  "especialitat": 1
+  "especialitat": 1,
+  "horari_disponible": [ { "dia": 0, "hora": 0 }, { "dia": 0, "hora": 1 } ],
+  "aules_possibles":   [2, 7]
 }
 ```
 
@@ -170,6 +172,8 @@ Catàleg de totes les assignatures. No inclou les hores ni els professors (això
 | `nom` | string | Nom complet |
 | `curs` | int | Índex del curs a `cursos[]` |
 | `especialitat` | int | Índex a `especialitats[]` |
+| `horari_disponible` | array | Slots `{dia, hora}` on es pot impartir el mòdul (p. ex. només matins o només tardes). **Buit = qualsevol hora.** S'interseca amb l'`horari_disponible` del curs. L'editor omple aquest camp amb els commutadors Matí/Tarda o marcant slots concrets |
+| `aules_possibles` | array | Índexs de les aules on es pot impartir, per requeriments d'espai o equipament. **Buit = qualsevol aula.** Cada hora del mòdul anirà a una aula d'aquest conjunt (un sol element = aula fixa). Té prioritat sobre l'aula preferida de l'assignació del professor (`professors[].moduls[].aula`) |
 
 > **Codis especials detectats automàticament pel preprocesador:**
 > - `TUTORIA` al codi o nom → tutoria
@@ -678,6 +682,8 @@ L'objecte classe inclou professor, mòdul i curs, però **no l'aula** (ja se sap
 | 16 | Aula `nomes_subgrups:true`: no pot tenir classes de grup sencer | Hard |
 | 17 | Aula `nomes_tardes:true`: no disponible abans de l'hora 6 (14:00) | Hard |
 | 18 | Hores pre-assignades (`horari` + `opcions.fixar_horari`): es mantenen al seu slot exacte | Hard (opcional) |
+| 19 | `horari_disponible` del mòdul: el mòdul només es pot impartir en aquells slots | Hard |
+| 20 | `aules_possibles` del mòdul: cada hora del mòdul va a una aula del conjunt | Hard |
 
 ---
 

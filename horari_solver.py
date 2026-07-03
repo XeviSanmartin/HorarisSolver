@@ -27,7 +27,18 @@ class Modul:
     nom: str
     curs: int
     especialitat: int
-    
+    # Slots {dia, hora} on es pot impartir (buit = qualsevol hora)
+    horari_disponible: List[Dict] = None
+    # Índexs de les aules on es pot impartir, per espai/equipament (buit = qualsevol)
+    aules_possibles: List[int] = None
+
+    def __post_init__(self):
+        if self.horari_disponible is None:
+            self.horari_disponible = []
+        if self.aules_possibles is None:
+            self.aules_possibles = []
+
+
 
 @dataclass
 class Curs:
@@ -177,7 +188,9 @@ class HorariData:
                 codi=modul_data.get('codi', ''),
                 nom=modul_data.get('nom', ''),
                 curs=modul_data.get('curs', -1),
-                especialitat=modul_data.get('especialitat', -1)
+                especialitat=modul_data.get('especialitat', -1),
+                horari_disponible=modul_data.get('horari_disponible', []) or [],
+                aules_possibles=modul_data.get('aules_possibles', []) or []
             )
             self.moduls.append(modul)
             self.modul_per_index[modul.index] = modul
@@ -393,12 +406,20 @@ class HorariData:
             return
 
         # El curs ha de tenir el slot dins del seu horari disponible
-        curs_idx = self.modul_per_index[m_idx].curs
-        curs = self.curs_per_index.get(curs_idx)
+        modul = self.modul_per_index[m_idx]
+        curs = self.curs_per_index.get(modul.curs)
         if curs is not None and curs.horari_disponible:
             disponibles = {(s.get('dia'), s.get('hora')) for s in curs.horari_disponible}
             if (dia, hora) not in disponibles:
                 avis(f"Horari fixat ({lloc}): el curs {curs.nom} no té aquest slot "
+                     f"al seu horari disponible; es descarta")
+                return
+
+        # El mòdul també ha de poder anar en aquest slot
+        if modul.horari_disponible:
+            slots_modul = {(s.get('dia'), s.get('hora')) for s in modul.horari_disponible}
+            if (dia, hora) not in slots_modul:
+                avis(f"Horari fixat ({lloc}): el mòdul {modul.nom} no té aquest slot "
                      f"al seu horari disponible; es descarta")
                 return
 
@@ -426,6 +447,12 @@ class HorariData:
                 avis(f"Horari fixat ({lloc}): l'aula {aula} no és compatible amb aquest slot; "
                      f"es fixa l'hora sense aula concreta")
                 aula = -1
+
+        # L'aula fixada ha de ser dins del conjunt d'aules del mòdul (si en té)
+        if aula != -1 and modul.aules_possibles and aula not in modul.aules_possibles:
+            avis(f"Horari fixat ({lloc}): l'aula {aula} no és al conjunt d'aules del mòdul "
+                 f"{modul.nom}; es fixa l'hora amb les aules del mòdul")
+            aula = -1
 
         self.horari_fixat.append({
             'professor': p_idx,
@@ -537,7 +564,9 @@ class HorariData:
                     'es_angles': modul.index in self.moduls_angles,
                     'es_sostenibilitat': modul.index in self.moduls_sostenibilitat,
                     'es_digitalizacio': modul.index in self.moduls_digitalizacio,
-                    'professors_assignats': self.professors_per_modul[modul.index]
+                    'professors_assignats': self.professors_per_modul[modul.index],
+                    'horari_disponible': modul.horari_disponible,
+                    'aules_possibles': modul.aules_possibles
                 }
                 for modul in self.moduls
             ],
@@ -622,8 +651,60 @@ class HorariData:
         if cursos_sense_tutoria:
             errors.append(f"Cursos sense tutoria: {', '.join(cursos_sense_tutoria)}")
 
+        # Validar les restriccions d'horari i aules dels mòduls
+        errors.extend(self._valida_restriccions_moduls())
+
         # Advertiments de la càrrega de l'horari pre-assignat
         errors.extend(self.advertiments_horari_fixat)
+
+        return errors
+
+    def _valida_restriccions_moduls(self) -> List[str]:
+        """Valida horari_disponible i aules_possibles dels mòduls"""
+        errors = []
+
+        for modul in self.moduls:
+            # Aules inexistents o inactives al conjunt del mòdul
+            aules_dolentes = [a for a in modul.aules_possibles if a not in self.aula_per_index]
+            if aules_dolentes:
+                errors.append(f"Mòdul {modul.nom}: les aules {aules_dolentes} del seu conjunt "
+                              f"d'aules no existeixen o no estan actives")
+
+            if not modul.horari_disponible:
+                continue
+
+            slots_modul = {(s.get('dia'), s.get('hora')) for s in modul.horari_disponible}
+
+            # Intersecció amb l'horari disponible del curs
+            curs = self.curs_per_index.get(modul.curs)
+            if curs is not None and curs.horari_disponible:
+                slots_curs = {(s.get('dia'), s.get('hora')) for s in curs.horari_disponible}
+                slots_modul = slots_modul & slots_curs
+                if not slots_modul:
+                    errors.append(f"Mòdul {modul.nom}: cap slot del seu horari disponible "
+                                  f"coincideix amb l'horari del curs {curs.nom}: serà infactible")
+                    continue
+
+            # Prou slots per a les hores de cada assignació
+            for p_idx in self.professors_per_modul.get(modul.index, []):
+                prof = self.professor_per_index.get(p_idx)
+                if prof is None:
+                    continue
+                for ma in prof.moduls:
+                    if ma.get('index') == modul.index and ma.get('hores', 0) > len(slots_modul):
+                        errors.append(f"Mòdul {modul.nom}: {prof.nom} hi té {ma['hores']} hores "
+                                      f"però l'horari disponible del mòdul només té "
+                                      f"{len(slots_modul)} slots: serà infactible")
+
+        # Aula preferida de l'assignació fora del conjunt d'aules del mòdul
+        for prof in self.professors:
+            for ma in prof.moduls:
+                modul = self.modul_per_index.get(ma.get('index'))
+                if (modul is not None and modul.aules_possibles and
+                        ma.get('aula', -1) != -1 and ma['aula'] not in modul.aules_possibles):
+                    errors.append(f"Mòdul {modul.nom}: l'aula preferida {ma['aula']} de "
+                                  f"l'assignació de {prof.nom} no és al conjunt d'aules del mòdul; "
+                                  f"es faran servir les aules del mòdul {modul.aules_possibles}")
 
         return errors
 

@@ -137,42 +137,66 @@ class HorariSolver:
             hores_requerides = assignacio['hores']
             aula_preferida = assignacio['aula']
             subgrup = assignacio['subgrup']
-            
+
             curs_idx = -1
+            slots_modul = None       # None = sense restricció d'horari del mòdul
+            aules_modul = None       # None = sense restricció d'aules del mòdul
             if modul_idx in self.modul_per_index:
-                curs_idx = self.modul_per_index[modul_idx].get('curs', -1)
-                
-                
+                modul = self.modul_per_index[modul_idx]
+                curs_idx = modul.get('curs', -1)
+
+                # Restricció d'horari del mòdul (matí/tarda o slots concrets)
+                if modul.get('horari_disponible'):
+                    slots_modul = {(s.get('dia'), s.get('hora')) for s in modul['horari_disponible']}
+                    print(f"Mòdul {modul.get('nom', modul_idx)}: restringit a {len(slots_modul)} slots")
+
+                # Conjunt d'aules del mòdul (espai/equipament)
+                if modul.get('aules_possibles'):
+                    aules_modul = set(modul['aules_possibles'])
+
+            # L'aula preferida de l'assignació ha de respectar el conjunt del mòdul;
+            # si no hi és, mana el conjunt (el preprocessador ja n'ha advertit)
+            if aula_preferida != -1 and aules_modul is not None and aula_preferida not in aules_modul:
+                aula_preferida = -1
+
             for dia in range(self.dies):
                 for hora in range(self.hores_per_dia):
                     # Verificar si esta hora es válida para aulas con restricción de tardes
-                    
+
 
                     if curs_idx != -1 and (dia, hora) not in hores_disponibles_per_curs.get(curs_idx, set()):
-                        continue  
-              
+                        continue
+
+                    # Slot fora de l'horari disponible del mòdul
+                    if slots_modul is not None and (dia, hora) not in slots_modul:
+                        continue
+
                     es_hora_tarda = hora >= 6
-                    
+
                     # Determinar aules possibles
                     if aula_preferida != -1:
                         # Si hay un aula preferida, verificar restricciones específicas
                         aula = self.aula_per_index.get(aula_preferida, {})
-                        
+
                         # Verificar restricciones del aula preferida
                         if (aula.get('nomes_subgrups', False) and subgrup == 3) or \
                         (aula.get('nomes_tardes', False) and not es_hora_tarda):
                             continue  # Saltar esta combinación inválida
-                        
+
                         aules_possibles = [aula_preferida]
                     else:
                         # Filtrar todas las aulas según las restricciones
                         aules_possibles = []
                         for a_idx, aula in self.aula_per_index.items():
+                            # Aula fora del conjunt del mòdul
+                            if aules_modul is not None and a_idx not in aules_modul:
+                                continue
+
                             # Verificar restricciones del aula
                             if (aula.get('nomes_subgrups', False) and subgrup == 3) or \
                             (aula.get('nomes_tardes', False) and not es_hora_tarda):
                                 continue  # Saltar esta aula
-                            
+
                             aules_possibles.append(a_idx)
                     
                     # Crear variables solo para combinaciones válidas

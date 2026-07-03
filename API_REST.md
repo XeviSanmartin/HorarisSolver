@@ -422,11 +422,14 @@ L'API queda a `http://<ip-del-servidor>:8000` (Swagger UI a `/docs`).
 
 ## Tests
 
-La suite (`tests/test_api.py`, 38 tests) cobreix:
+La suite (`tests/test_api.py`, 41 tests) cobreix:
 
 - **Endpoints**: health, redirecció a docs, OpenAPI, validate (dades reals,
   buides, invàlides), preprocess (estructura + **test de regressió** contra la
   sortida del pipeline CLI original).
+- **Restriccions per mòdul**: `horari_disponible` (matí/tarda o slots concrets)
+  i `aules_possibles` respectats a la solució; advertiments per slots
+  insuficients o aules inexistents.
 - **Hores pre-assignades**: extracció i normalització d'`horari_fixat`,
   paràmetre `periode`, descarts amb advertiment, resolució amb `fixar_horari`
   (cada hora fixada apareix exactament al seu slot), fixació impossible (→

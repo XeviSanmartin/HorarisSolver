@@ -382,6 +382,93 @@ def test_solve_temps_molt_curt(dades_reals):
 
 
 # ---------------------------------------------------------------------------
+# Restriccions per mòdul: horari_disponible i aules_possibles
+# ---------------------------------------------------------------------------
+
+def test_preprocess_restriccions_modul(dades_reals):
+    """Les restriccions del mòdul passen a les dades processades."""
+    dades = copy.deepcopy(dades_reals)
+    modul = dades['moduls'][0]
+    modul['horari_disponible'] = [{'dia': 0, 'hora': 0}, {'dia': 0, 'hora': 1}]
+    modul['aules_possibles'] = [dades['aules'][0]['index']]
+
+    r = client.post('/api/preprocess', json={'dades': dades})
+    assert r.status_code == 200
+    processat = next(m for m in r.json()['dades_processades']['moduls']
+                     if m['index'] == modul['index'])
+    assert processat['horari_disponible'] == [{'dia': 0, 'hora': 0}, {'dia': 0, 'hora': 1}]
+    assert processat['aules_possibles'] == [dades['aules'][0]['index']]
+
+
+def test_validate_restriccions_modul_advertiments(dades_reals):
+    """Slots insuficients per a les hores i aules inexistents generen advertiments."""
+    dades = copy.deepcopy(dades_reals)
+    # Un mòdul que algun professor imparteixi amb més d'1 hora
+    professor = next(p for p in dades['professors']
+                     if p.get('actiu') and any(m.get('hores', 0) > 1 for m in p.get('moduls', [])))
+    assignacio = next(m for m in professor['moduls'] if m.get('hores', 0) > 1)
+    modul = next(m for m in dades['moduls'] if m['index'] == assignacio['index'])
+    modul['horari_disponible'] = [{'dia': 0, 'hora': 3}]   # 1 slot per a 2+ hores
+    modul['aules_possibles'] = [99999]                     # aula inexistent
+
+    r = client.post('/api/validate', json={'dades': dades})
+    assert r.status_code == 200
+    advertiments = r.json()['advertiments']
+    assert any('infactible' in a and modul['nom'] in a for a in advertiments), advertiments
+    assert any('99999' in a for a in advertiments), advertiments
+
+
+def test_solve_respecta_restriccions_modul(solucio_real, dades_reals):
+    """Un mòdul restringit a slots i aules concrets només apareix allà.
+
+    Es restringeix un mòdul normal als slots i aules exactes on la solució real
+    el va col·locar (garanteix factibilitat) i es comprova la solució nova."""
+    especials = {m['index'] for m in dades_reals['moduls']
+                 if 'tutoria' in (m.get('nom', '') + m.get('codi', '')).lower()
+                 or m.get('especialitat') in (2, 3)}
+    especials |= set(dades_reals.get('projectes') or [])
+
+    # Placements per mòdul a la solució real
+    placements = {}
+    for curs in solucio_real['solucio']['horari']:
+        for d, dia in enumerate(curs):
+            for h, classes in enumerate(dia):
+                for c in classes:
+                    placements.setdefault(c['modul_index'], []).append((d, h, c['aula_index']))
+
+    modul_idx, llocs = next((m, p) for m, p in placements.items()
+                            if m not in especials and len(p) >= 2)
+
+    dades = copy.deepcopy(dades_reals)
+    modul = next(m for m in dades['moduls'] if m['index'] == modul_idx)
+    slots_permesos = sorted({(d, h) for d, h, _ in llocs})
+    aules_permeses = sorted({a for _, _, a in llocs})
+    modul['horari_disponible'] = [{'dia': d, 'hora': h} for d, h in slots_permesos]
+    modul['aules_possibles'] = aules_permeses
+
+    r = client.post('/api/solve', json={
+        'dades': dades,
+        'opcions': {'max_time_seconds': 120, 'num_workers': 8},
+    })
+    assert r.status_code == 200, r.text
+    cos = r.json()
+    assert cos['estat'] in ('OPTIMAL', 'FEASIBLE'), cos['estat']
+
+    ocurrencies = 0
+    for curs in cos['solucio']['horari']:
+        for d, dia in enumerate(curs):
+            for h, classes in enumerate(dia):
+                for c in classes:
+                    if c['modul_index'] == modul_idx:
+                        ocurrencies += 1
+                        assert (d, h) in slots_permesos, (
+                            f'Mòdul {modul_idx} col·locat fora dels slots permesos: dia {d} hora {h}')
+                        assert c['aula_index'] in aules_permeses, (
+                            f'Mòdul {modul_idx} en aula no permesa: {c["aula_index"]}')
+    assert ocurrencies == len(llocs)
+
+
+# ---------------------------------------------------------------------------
 # CORS i feines asíncrones (/api/jobs)
 # ---------------------------------------------------------------------------
 

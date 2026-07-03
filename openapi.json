@@ -7,7 +7,7 @@
       "name": "HorarisSolver",
       "url": "https://github.com/XeviSanmartin/HorarisSolver"
     },
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   "paths": {
     "/api/health": {
@@ -690,6 +690,22 @@
             "title": "Especialitat",
             "description": "Índex a `especialitats[]` (2 = FOL, 3 = anglès).",
             "default": -1
+          },
+          "horari_disponible": {
+            "items": {
+              "$ref": "#/components/schemas/SlotHorari"
+            },
+            "type": "array",
+            "title": "Horari Disponible",
+            "description": "Slots on es pot impartir el mòdul (p. ex. només matins o només tardes). Buit = qualsevol hora. S'interseca amb l'`horari_disponible` del curs."
+          },
+          "aules_possibles": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Aules Possibles",
+            "description": "Índexs de les aules on es pot impartir (requeriments d'espai/equipament). Buit = qualsevol aula. Cada hora del mòdul anirà a una aula d'aquest conjunt. Té prioritat sobre l'aula preferida de l'assignació del professor."
           }
         },
         "additionalProperties": true,
@@ -1047,7 +1063,7 @@
             "type": "string",
             "title": "Versio Api",
             "examples": [
-              "1.3.0"
+              "1.4.0"
             ]
           },
           "max_temps_solver": {

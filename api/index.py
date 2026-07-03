@@ -42,7 +42,7 @@ MAX_TEMPS_SOLVER = float(os.environ.get('MAX_TEMPS_SOLVER', 280))
 # Per defecte s'accepta qualsevol origen: l'API no té estat ni credencials.
 CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',') if o.strip()]
 
-VERSIO_API = '1.3.0'
+VERSIO_API = '1.4.0'
 
 DESCRIPCIO = """
 Servei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).
@@ -165,6 +165,14 @@ class Professor(BaseModel):
     moduls: list[ModulProfessor] = Field(default_factory=list)
 
 
+class SlotHorari(BaseModel):
+    """Franja horària concreta."""
+    model_config = ConfigDict(extra='allow')
+
+    dia: int = Field(ge=0, le=4)
+    hora: int = Field(ge=0, le=12)
+
+
 class ModulCataleg(BaseModel):
     """Entrada del catàleg de mòduls (les hores i professors van a `professors[].moduls`)."""
     model_config = ConfigDict(extra='allow')
@@ -174,14 +182,15 @@ class ModulCataleg(BaseModel):
     nom: str = Field(default='', description="Nom complet. Es detecten automàticament: 'tutoria', 'anglès', 'FOL', 'sostenibilitat', 'digitalització'.")
     curs: int = Field(default=-1, description='Índex del curs a `cursos[]`.')
     especialitat: int = Field(default=-1, description='Índex a `especialitats[]` (2 = FOL, 3 = anglès).')
-
-
-class SlotHorari(BaseModel):
-    """Franja horària concreta."""
-    model_config = ConfigDict(extra='allow')
-
-    dia: int = Field(ge=0, le=4)
-    hora: int = Field(ge=0, le=12)
+    horari_disponible: list[SlotHorari] = Field(
+        default_factory=list,
+        description="Slots on es pot impartir el mòdul (p. ex. només matins o només tardes). "
+                    "Buit = qualsevol hora. S'interseca amb l'`horari_disponible` del curs.")
+    aules_possibles: list[int] = Field(
+        default_factory=list,
+        description="Índexs de les aules on es pot impartir (requeriments d'espai/equipament). "
+                    "Buit = qualsevol aula. Cada hora del mòdul anirà a una aula d'aquest conjunt. "
+                    "Té prioritat sobre l'aula preferida de l'assignació del professor.")
 
 
 class Curs(BaseModel):
