@@ -70,7 +70,8 @@ def test_openapi_esquemes_documentats():
     esquemes = spec['components']['schemas']
     for model in ('DadesSolver', 'Professor', 'ModulProfessor', 'Desiderata',
                   'ModulCataleg', 'Curs', 'Aula', 'Especialitat', 'OpcionsSolve',
-                  'RespostaSolve', 'Solucio', 'StatsSolucio', 'DetallError'):
+                  'RespostaSolve', 'Solucio', 'StatsSolucio', 'DetallError',
+                  'RespostaFeina', 'RespostaFeinaCreada'):
         assert model in esquemes, f'falta l\'esquema {model}'
     # Camps amb descripció i restriccions de rang
     desiderata = esquemes['Desiderata']['properties']
@@ -378,6 +379,108 @@ def test_solve_temps_molt_curt(dades_reals):
     })
     assert r.status_code == 200
     assert r.json()['estat'] in ('OPTIMAL', 'FEASIBLE', 'INFEASIBLE', 'UNKNOWN')
+
+
+# ---------------------------------------------------------------------------
+# CORS i feines asíncrones (/api/jobs)
+# ---------------------------------------------------------------------------
+
+def test_cors_habilitat():
+    """Les respostes a peticions amb Origin han de dur la capçalera CORS."""
+    r = client.get('/api/health', headers={'Origin': 'http://localhost:5173'})
+    assert r.status_code == 200
+    assert r.headers.get('access-control-allow-origin') in ('*', 'http://localhost:5173')
+
+
+def test_cors_preflight():
+    r = client.options('/api/jobs', headers={
+        'Origin': 'http://localhost:5173',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type',
+    })
+    assert r.status_code == 200
+    assert r.headers.get('access-control-allow-origin')
+
+
+def _espera_feina(feina_id, timeout=120):
+    """Consulta la feina fins que surti d'en_curs (o s'esgoti el temps)."""
+    import time as _time
+    limit = _time.time() + timeout
+    while _time.time() < limit:
+        cos = client.get(f'/api/jobs/{feina_id}').json()
+        if cos['estat_feina'] != 'en_curs':
+            return cos
+        _time.sleep(1)
+    return cos
+
+
+def test_feina_inexistent():
+    assert client.get('/api/jobs/no-existeix').status_code == 404
+    assert client.delete('/api/jobs/no-existeix').status_code == 404
+
+
+def test_feina_opcions_invalides(dades_reals):
+    r = client.post('/api/jobs', json={
+        'dades': dades_reals,
+        'opcions': {'max_time_seconds': -1},
+    })
+    assert r.status_code == 422
+
+
+def test_feina_acaba_sola(dades_reals):
+    """Una feina infactible (professor totalment bloquejat) acaba sola i ràpid."""
+    dades = copy.deepcopy(dades_reals)
+    professor = next(p for p in dades['professors']
+                     if p.get('actiu') and p.get('moduls'))
+    professor['desiderata'] = [
+        {'dia': d, 'hora': h, 'tipus': 2} for d in range(5) for h in range(13)
+    ]
+    r = client.post('/api/jobs', json={
+        'dades': dades,
+        'opcions': {'max_time_seconds': 60, 'num_workers': 8},
+    })
+    assert r.status_code == 202, r.text
+    cos = _espera_feina(r.json()['id'])
+    assert cos['estat_feina'] == 'acabada', cos
+    assert cos['resultat']['estat'] == 'INFEASIBLE'
+    assert cos['aturada_demanada'] is False
+
+
+def test_feina_aturada_conserva_millor_solucio(dades_reals):
+    """El cicle complet: llançar, seguir el progrés, aturar a mig càlcul.
+
+    S'espera fins que CP-SAT troba la primera solució i s'atura la feina: el
+    resultat ha de ser la millor solució trobada (FEASIBLE), no una pèrdua."""
+    import time as _time
+    r = client.post('/api/jobs', json={
+        'dades': dades_reals,
+        'opcions': {'max_time_seconds': 280, 'num_workers': 8},
+    })
+    assert r.status_code == 202, r.text
+    fid = r.json()['id']
+
+    # Esperar la primera solució intermèdia (progrés visible)
+    limit = _time.time() + 240
+    cos = None
+    while _time.time() < limit:
+        cos = client.get(f'/api/jobs/{fid}').json()
+        if cos['solucions_intermedies'] > 0 or cos['estat_feina'] != 'en_curs':
+            break
+        _time.sleep(2)
+
+    r = client.delete(f'/api/jobs/{fid}')
+    assert r.status_code == 200
+    assert r.json()['aturada_demanada'] is True or r.json()['estat_feina'] != 'en_curs'
+
+    cos = _espera_feina(fid, timeout=60)
+    assert cos['estat_feina'] == 'acabada', cos
+    if cos['solucions_intermedies'] > 0:
+        # Hi havia solució quan hem aturat: s'ha de conservar
+        assert cos['resultat']['estat'] in ('FEASIBLE', 'OPTIMAL')
+        assert cos['resultat']['solucio'] is not None
+        assert cos['objectiu_actual'] is not None
+    else:
+        assert cos['resultat']['estat'] in ('FEASIBLE', 'OPTIMAL', 'UNKNOWN')
 
 
 # ---------------------------------------------------------------------------

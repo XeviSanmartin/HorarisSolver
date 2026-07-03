@@ -102,9 +102,12 @@ fixa la solució real sencera i comprova **cel·la a cel·la** que el solver la
 retorna idèntica; `test_solve_fixacio_impossible` comprova que un excés d'hores
 fixades dona `INFEASIBLE` amb l'advertiment corresponent.
 
-## Nota per a l'editor (C:\Git\Horaris)
+## Integració amb l'editor (C:\Git\Horaris)
 
-No cal tocar res a l'app: ja exporta el camp `horari` amb tot el que el solver
-necessita. Una millora futura natural seria un botó a la vista «Solver» de
-l'editor que cridi `/api/solve` amb `fixar_horari: true` i reimporti la
-`solucio_compatible`.
+La vista «Solver» de l'editor té un apartat **Execució del solver** que fa
+servir aquesta funcionalitat de cap a cap: configura la URL del servidor
+(localhost, VM del Proxmox o Vercel), el temps màxim, els fils de cerca i la
+fixació de les hores ja col·locades al període actiu; llança la resolució en
+segon pla (`POST /api/jobs`), en mostra el progrés, permet aturar-la conservant
+la millor solució, i carrega la `solucio_compatible` al període actiu de
+l'editor (amb punt de control a l'historial: es pot desfer amb Ctrl+Z).

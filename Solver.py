@@ -23,6 +23,10 @@ class HorariSolver:
 
         # Estat de l'última resolució ('OPTIMAL', 'FEASIBLE', 'INFEASIBLE', 'UNKNOWN', 'MODEL_INVALID')
         self.ultim_estat = None
+
+        # Instància CpSolver activa (per poder aturar la cerca des d'un altre fil)
+        self.cp_solver = None
+        self.atura_demanada = False
         
         # Variables de decisió
         self.vars_assignacio = {}  # (modul, professor, dia, hora, aula, subgrup)
@@ -1128,8 +1132,19 @@ class HorariSolver:
 
 
                 
+    def atura(self):
+        """Demana aturar la cerca en curs (cridable des d'un altre fil).
+
+        CP-SAT s'atura de manera neta i Solve() retorna la millor solució
+        trobada fins al moment (FEASIBLE) o UNKNOWN si encara no n'hi havia cap.
+        """
+        self.atura_demanada = True
+        if self.cp_solver is not None:
+            self.cp_solver.stop_search()
+
     def resoldre(self, max_time_seconds: float = 900, num_workers: int = 8,
-                 log_search_progress: bool = True, output_path: str = 'solucio_horaris.json'):
+                 log_search_progress: bool = True, output_path: str = 'solucio_horaris.json',
+                 solution_callback=None):
         """Resol el model i retorna la solució.
 
         Args:
@@ -1137,6 +1152,8 @@ class HorariSolver:
             num_workers: threads de cerca paral·lela.
             log_search_progress: mostrar el log de cerca d'OR-Tools.
             output_path: fitxer on guardar la solució (None = no guardar).
+            solution_callback: CpSolverSolutionCallback opcional; CP-SAT el crida
+                a cada solució millorada (útil per informar de progrés).
         """
 
         print("Iniciant la resolució del model...")
@@ -1146,6 +1163,7 @@ class HorariSolver:
 
         # Crear solucionador
         solver = cp_model.CpSolver()
+        self.cp_solver = solver
 
         # Configuració
         solver.parameters.optimize_with_core = True
@@ -1155,9 +1173,16 @@ class HorariSolver:
         solver.parameters.num_search_workers = num_workers
         solver.parameters.cp_model_presolve = True
 
+        # Si l'aturada s'ha demanat abans de començar, no val la pena cercar
+        if self.atura_demanada:
+            solver.parameters.max_time_in_seconds = 0.01
+
         # Resoldre el model
         start_time = time.time()
-        status = solver.Solve(self.model)
+        if solution_callback is not None:
+            status = solver.Solve(self.model, solution_callback)
+        else:
+            status = solver.Solve(self.model)
         end_time = time.time()
         
         if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:

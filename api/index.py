@@ -13,6 +13,9 @@ scripts/exporta_openapi.py.
 import io
 import os
 import sys
+import time
+import uuid
+import threading
 import contextlib
 import traceback
 
@@ -22,7 +25,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from ortools.sat.python import cp_model
 from pydantic import BaseModel, ConfigDict, Field
 
 from horari_solver import HorariData
@@ -30,9 +35,14 @@ from Solver import HorariSolver, genera_json_solucio_compatible
 
 # Límit dur del temps de resolució. A Vercel la funció té un maxDuration
 # (configurat a vercel.json); deixem marge per al preprocessament i la resposta.
+# En un desplegament propi (Docker/uvicorn) es pot apujar tant com calgui.
 MAX_TEMPS_SOLVER = float(os.environ.get('MAX_TEMPS_SOLVER', 280))
 
-VERSIO_API = '1.2.0'
+# Orígens permesos per a peticions des del navegador (separats per comes).
+# Per defecte s'accepta qualsevol origen: l'API no té estat ni credencials.
+CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',') if o.strip()]
+
+VERSIO_API = '1.3.0'
 
 DESCRIPCIO = """
 Servei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).
@@ -40,8 +50,13 @@ Servei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers
 ## Flux
 
 1. **`POST /api/validate`** — valida el JSON d'entrada (ràpid, sense resoldre).
-2. **`POST /api/solve`** — preprocessa, construeix el model CP-SAT i resol.
+2. **`POST /api/solve`** — preprocessa, construeix el model CP-SAT i resol (síncron).
 3. Opcionalment, **`POST /api/preprocess`** per inspeccionar el JSON intermedi (debug).
+
+En desplegaments persistents (uvicorn local, Docker en un servidor propi) hi ha
+també el mode **asíncron**: `POST /api/jobs` llança la resolució en segon pla,
+`GET /api/jobs/{id}` n'informa del progrés i `DELETE /api/jobs/{id}` l'atura
+conservant la millor solució trobada fins al moment.
 
 ## Format d'entrada
 
@@ -77,6 +92,11 @@ TAGS_OPENAPI = [
     {'name': 'Servei', 'description': 'Estat i metadades del servei.'},
     {'name': 'Validació', 'description': 'Validació i preprocessament de dades sense resoldre.'},
     {'name': 'Resolució', 'description': 'Construcció i resolució del model CP-SAT.'},
+    {'name': 'Feines', 'description':
+        'Resolució asíncrona: llançar el solver en segon pla, consultar-ne el progrés '
+        'i aturar-lo conservant la millor solució trobada. **Requereix un desplegament '
+        'persistent** (uvicorn/Docker): a Vercel cada petició pot anar a una instància '
+        'diferent i el registre de feines (en memòria) no es comparteix.'},
 ]
 
 app = FastAPI(
@@ -85,6 +105,13 @@ app = FastAPI(
     version=VERSIO_API,
     openapi_tags=TAGS_OPENAPI,
     contact={'name': 'HorarisSolver', 'url': 'https://github.com/XeviSanmartin/HorarisSolver'},
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
 
@@ -395,6 +422,37 @@ class DetallError(BaseModel):
     traca: str = Field(description='Traça reduïda per a depuració.')
 
 
+class RespostaFeinaCreada(BaseModel):
+    """Resposta de la creació d'una feina de resolució asíncrona."""
+    id: str = Field(description='Identificador de la feina, per a GET/DELETE /api/jobs/{id}.')
+    estat_feina: str = Field(examples=['en_curs'])
+
+
+class RespostaFeina(BaseModel):
+    """Estat d'una feina de resolució asíncrona."""
+    id: str
+    estat_feina: str = Field(
+        description="'en_curs' (el solver treballa), 'acabada' (hi ha `resultat`) o "
+                    "'error' (hi ha `error`).",
+        examples=['en_curs'])
+    aturada_demanada: bool = Field(
+        description="Cert si s'ha demanat aturar la feina amb DELETE. La feina acabarà "
+                    "poc després amb la millor solució trobada (o UNKNOWN si no n'hi havia).")
+    temps_transcorregut: float = Field(
+        description='Segons des que la feina ha començat a resoldre.')
+    solucions_intermedies: int = Field(
+        description='Nombre de solucions millorades que CP-SAT ha trobat fins ara.')
+    objectiu_actual: Optional[float] = Field(
+        default=None,
+        description="Valor de la funció objectiu de l'última solució trobada (com més "
+                    "baix, millor). `null` mentre no hi hagi cap solució.")
+    advertiments: list[str] = Field(default_factory=list)
+    resultat: Optional[RespostaSolve] = Field(
+        default=None, description="Present quan `estat_feina` és 'acabada'.")
+    error: Optional[DetallError] = Field(
+        default=None, description="Present quan `estat_feina` és 'error'.")
+
+
 RESPOSTES_DADES = {
     422: {
         'description': 'El cos de la petició no compleix l\'esquema (error Pydantic estàndard) '
@@ -440,6 +498,42 @@ def _preprocessa(dades: DadesSolver, periode: int = 0) -> tuple[HorariData, list
                 'traca': traceback.format_exc(limit=3),
             },
         )
+
+
+def _afegeix_advertiments_fixacio(advertiments: list[str], dades_processades: dict,
+                                  opcions: 'OpcionsSolve') -> None:
+    """Informa de si les hores pre-assignades detectades es fixaran o no."""
+    hores_fixades = len(dades_processades.get('horari_fixat', []))
+    if hores_fixades and opcions.fixar_horari:
+        advertiments.append(
+            f"S'han fixat {hores_fixades} hores pre-assignades del període {opcions.periode}: "
+            f"el solver les manté inamovibles.")
+    elif hores_fixades:
+        advertiments.append(
+            f"S'han detectat {hores_fixades} hores pre-assignades (període {opcions.periode}) "
+            f"però `opcions.fixar_horari` és fals: el solver les ignora.")
+
+
+def _construeix_resposta_solve(solver: HorariSolver, solucio: Optional[dict],
+                               opcions: 'OpcionsSolve', template: dict,
+                               advertiments: list[str]) -> RespostaSolve:
+    """Converteix el resultat del solver en una RespostaSolve."""
+    if solucio is None:
+        return RespostaSolve(estat=solver.ultim_estat or 'UNKNOWN', advertiments=advertiments)
+
+    solucio_compatible = None
+    if opcions.incloure_compatible:
+        with _silenci():
+            solucio_compatible = genera_json_solucio_compatible(
+                solucio, template=template, output_path=None,
+            )
+
+    return RespostaSolve(
+        estat=solucio['stats']['estat'],
+        solucio=solucio,
+        solucio_compatible=solucio_compatible,
+        advertiments=advertiments,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -522,16 +616,7 @@ def solve(peticio: PeticioSolve) -> RespostaSolve:
 
     hd, advertiments = _preprocessa(peticio.dades, periode=opcions.periode)
     dades_processades = hd.genera_dades_processades()
-
-    hores_fixades = len(dades_processades.get('horari_fixat', []))
-    if hores_fixades and opcions.fixar_horari:
-        advertiments.append(
-            f"S'han fixat {hores_fixades} hores pre-assignades del període {opcions.periode}: "
-            f"el solver les manté inamovibles.")
-    elif hores_fixades:
-        advertiments.append(
-            f"S'han detectat {hores_fixades} hores pre-assignades (període {opcions.periode}) "
-            f"però `opcions.fixar_horari` és fals: el solver les ignora.")
+    _afegeix_advertiments_fixacio(advertiments, dades_processades, opcions)
 
     try:
         with _silenci():
@@ -543,6 +628,8 @@ def solve(peticio: PeticioSolve) -> RespostaSolve:
                 log_search_progress=False,
                 output_path=None,
             )
+            return _construeix_resposta_solve(
+                solver, solucio, opcions, peticio.dades.com_a_dict(), advertiments)
     except HTTPException:
         raise
     except Exception as e:
@@ -555,19 +642,175 @@ def solve(peticio: PeticioSolve) -> RespostaSolve:
             },
         )
 
-    if solucio is None:
-        return RespostaSolve(estat=solver.ultim_estat or 'UNKNOWN', advertiments=advertiments)
 
-    solucio_compatible = None
-    if opcions.incloure_compatible:
+# ---------------------------------------------------------------------------
+# Feines asíncrones (resolució en segon pla amb aturada)
+#
+# El registre viu en memòria del procés: funciona en desplegaments persistents
+# (uvicorn local, Docker al servidor propi) executats amb UN SOL procés. A
+# Vercel cada petició pot anar a una instància diferent i les feines no s'hi
+# comparteixen: allà useu el POST /api/solve síncron.
+# ---------------------------------------------------------------------------
+
+FEINES: dict[str, dict] = {}
+FEINES_LOCK = threading.Lock()
+FEINES_TTL = 3600.0  # les feines finalitzades s'esborren al cap d'una hora
+
+
+class _CallbackProgres(cp_model.CpSolverSolutionCallback):
+    """Anota a la feina cada solució millorada i hi aplica l'aturada demanada."""
+
+    def __init__(self, feina: dict):
+        super().__init__()
+        self._feina = feina
+
+    def on_solution_callback(self):
+        self._feina['solucions_intermedies'] += 1
+        self._feina['objectiu_actual'] = self.ObjectiveValue()
+        if self._feina['aturada_demanada']:
+            self.StopSearch()
+
+
+def _neteja_feines():
+    """Esborra del registre les feines finalitzades fa més de FEINES_TTL segons."""
+    ara = time.time()
+    with FEINES_LOCK:
+        antigues = [fid for fid, f in FEINES.items()
+                    if f['estat_feina'] != 'en_curs' and ara - f['creada'] > FEINES_TTL]
+        for fid in antigues:
+            del FEINES[fid]
+
+
+def _executa_feina(feina: dict, dades_processades: dict, opcions: OpcionsSolve,
+                   template: dict, max_time: float):
+    """Cos del fil de treball d'una feina."""
+    try:
         with _silenci():
-            solucio_compatible = genera_json_solucio_compatible(
-                solucio, template=peticio.dades.com_a_dict(), output_path=None,
+            solver = HorariSolver(dades_processades)
+            feina['_solver'] = solver
+            # Cobreix l'aturada demanada abans que el solver existís
+            if feina['aturada_demanada']:
+                solver.atura()
+            solucio = solver.executar(
+                fixar_horari=opcions.fixar_horari,
+                max_time_seconds=max_time,
+                num_workers=opcions.num_workers,
+                log_search_progress=False,
+                output_path=None,
+                solution_callback=_CallbackProgres(feina),
             )
+            feina['resultat'] = _construeix_resposta_solve(
+                solver, solucio, opcions, template, feina['advertiments'])
+        feina['estat_feina'] = 'acabada'
+    except Exception as e:
+        feina['error'] = DetallError(
+            error='Error intern construint o resolent el model.',
+            detall=f'{type(e).__name__}: {e}',
+            traca=traceback.format_exc(limit=5),
+        )
+        feina['estat_feina'] = 'error'
+    finally:
+        feina['finalitzada'] = time.time()
 
-    return RespostaSolve(
-        estat=solucio['stats']['estat'],
-        solucio=solucio,
-        solucio_compatible=solucio_compatible,
-        advertiments=advertiments,
+
+def _vista_feina(feina: dict) -> RespostaFeina:
+    fi = feina['finalitzada'] or time.time()
+    return RespostaFeina(
+        id=feina['id'],
+        estat_feina=feina['estat_feina'],
+        aturada_demanada=feina['aturada_demanada'],
+        temps_transcorregut=round(max(0.0, fi - feina['iniciada']), 1),
+        solucions_intermedies=feina['solucions_intermedies'],
+        objectiu_actual=feina['objectiu_actual'],
+        advertiments=feina['advertiments'],
+        resultat=feina['resultat'],
+        error=feina['error'],
     )
+
+
+def _busca_feina(feina_id: str) -> dict:
+    feina = FEINES.get(feina_id)
+    if feina is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Feina '{feina_id}' desconeguda: pot haver caducat (TTL "
+                   f"{FEINES_TTL / 60:.0f} min) o el servidor pot haver-se reiniciat.",
+        )
+    return feina
+
+
+@app.post('/api/jobs', response_model=RespostaFeinaCreada, status_code=202, tags=['Feines'],
+          summary='Llança una resolució en segon pla', responses=RESPOSTES_DADES)
+def crea_feina(peticio: PeticioSolve) -> RespostaFeinaCreada:
+    """Valida i preprocessa les dades, llança el solver en un fil i retorna a l'instant.
+
+    Mateix cos de petició que `POST /api/solve`. Consulteu el progrés amb
+    `GET /api/jobs/{id}` i atureu-la (conservant la millor solució trobada)
+    amb `DELETE /api/jobs/{id}`.
+
+    **Només fiable en desplegaments persistents d'un sol procés** (uvicorn,
+    Docker): el registre de feines viu en memòria.
+    """
+    _neteja_feines()
+    opcions = peticio.opcions
+    max_time = min(opcions.max_time_seconds, MAX_TEMPS_SOLVER)
+
+    hd, advertiments = _preprocessa(peticio.dades, periode=opcions.periode)
+    dades_processades = hd.genera_dades_processades()
+    _afegeix_advertiments_fixacio(advertiments, dades_processades, opcions)
+
+    ara = time.time()
+    feina = {
+        'id': uuid.uuid4().hex[:12],
+        'estat_feina': 'en_curs',
+        'aturada_demanada': False,
+        'creada': ara,
+        'iniciada': ara,
+        'finalitzada': None,
+        'solucions_intermedies': 0,
+        'objectiu_actual': None,
+        'advertiments': advertiments,
+        'resultat': None,
+        'error': None,
+        '_solver': None,
+    }
+    with FEINES_LOCK:
+        FEINES[feina['id']] = feina
+
+    threading.Thread(
+        target=_executa_feina,
+        args=(feina, dades_processades, opcions, peticio.dades.com_a_dict(), max_time),
+        daemon=True,
+    ).start()
+
+    return RespostaFeinaCreada(id=feina['id'], estat_feina='en_curs')
+
+
+@app.get('/api/jobs/{feina_id}', response_model=RespostaFeina,
+         response_model_exclude_none=True, tags=['Feines'],
+         summary="Estat i progrés d'una feina",
+         responses={404: {'description': 'Feina desconeguda o caducada.'}})
+def consulta_feina(feina_id: str) -> RespostaFeina:
+    """Retorna l'estat de la feina: progrés mentre `estat_feina` és `en_curs`
+    (temps, solucions trobades, objectiu actual), i el `resultat` complet
+    (mateix format que `POST /api/solve`) quan és `acabada`.
+    """
+    return _vista_feina(_busca_feina(feina_id))
+
+
+@app.delete('/api/jobs/{feina_id}', response_model=RespostaFeina,
+            response_model_exclude_none=True, tags=['Feines'],
+            summary='Atura una feina en curs',
+            responses={404: {'description': 'Feina desconeguda o caducada.'}})
+def atura_feina(feina_id: str) -> RespostaFeina:
+    """Demana aturar la cerca. CP-SAT s'atura de manera neta: la feina acaba poc
+    després amb la **millor solució trobada fins al moment** (`FEASIBLE`) o
+    `UNKNOWN` si encara no n'hi havia cap. Útil quan, a mig càlcul, t'adones
+    que calia fixar alguna hora més.
+    """
+    feina = _busca_feina(feina_id)
+    if feina['estat_feina'] == 'en_curs':
+        feina['aturada_demanada'] = True
+        if feina['_solver'] is not None:
+            feina['_solver'].atura()
+    return _vista_feina(feina)

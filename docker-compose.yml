@@ -1,0 +1,19 @@
+# Desplegament de l'API del solver en un servidor propi (VM del Proxmox).
+#
+#   docker compose up -d --build
+#
+# L'API queda a http://<ip-del-servidor>:8000 (Swagger UI a /docs).
+services:
+  solver:
+    build: .
+    container_name: horaris-solver
+    ports:
+      - "8000:8000"
+    environment:
+      # Temps màxim de resolució en segons (aquí no hi ha límits de plataforma)
+      MAX_TEMPS_SOLVER: "7200"
+      # Orígens permesos per CORS, separats per comes ("*" = qualsevol).
+      # Per restringir-ho a l'editor d'horaris, poseu-hi el seu origen, p. ex.:
+      #   CORS_ORIGINS: "https://elmeuprojecte.web.app,http://localhost:5173"
+      CORS_ORIGINS: "*"
+    restart: unless-stopped

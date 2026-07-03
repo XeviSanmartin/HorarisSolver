@@ -27,9 +27,11 @@ resolució amb OR-Tools CP-SAT). Construït amb FastAPI i desplegable a Vercel.
    - [`POST /api/validate`](#post-apivalidate)
    - [`POST /api/preprocess`](#post-apipreprocess)
    - [`POST /api/solve`](#post-apisolve)
+   - [Feines asíncrones: `POST/GET/DELETE /api/jobs`](#feines-asíncrones-apijobs)
 4. [Codis d'error](#codis-derror)
 5. [Límits i consideracions de desplegament](#límits-i-consideracions-de-desplegament)
-6. [Tests](#tests)
+6. [Desplegament en servidor propi (Docker)](#desplegament-en-servidor-propi-docker)
+7. [Tests](#tests)
 
 ---
 
@@ -297,6 +299,42 @@ else:
 
 ---
 
+### Feines asíncrones (`/api/jobs`)
+
+Resolució en **segon pla**, amb seguiment de progrés i aturada. Pensat per a
+l'editor d'horaris (que llança el solver i mostra l'evolució) i per a
+resolucions llargues en servidor propi.
+
+> **Requereix un desplegament persistent d'un sol procés** (uvicorn local o
+> Docker): el registre de feines viu en memòria. A Vercel cada petició pot
+> anar a una instància diferent; allà useu el `POST /api/solve` síncron.
+
+| Endpoint | Funció |
+|---|---|
+| `POST /api/jobs` | Llança una resolució (mateix cos que `/api/solve`). Retorna `202` amb `{id, estat_feina}` a l'instant |
+| `GET /api/jobs/{id}` | Estat i progrés: `temps_transcorregut`, `solucions_intermedies`, `objectiu_actual`. Quan `estat_feina` és `acabada`, inclou `resultat` (mateix format que la resposta de `/api/solve`) |
+| `DELETE /api/jobs/{id}` | Atura la cerca. CP-SAT s'atura netament i la feina acaba amb la **millor solució trobada fins al moment** (`FEASIBLE`) o `UNKNOWN` si no n'hi havia cap |
+
+Estats de la feina (`estat_feina`): `en_curs` → `acabada` (amb `resultat`) o
+`error` (amb `error`). El camp `aturada_demanada` indica si s'ha demanat
+l'aturada. Les feines finalitzades s'esborren del registre al cap d'una hora.
+
+**Flux típic des de l'editor:**
+
+```
+POST /api/jobs                 → { "id": "4909f8bea64a", "estat_feina": "en_curs" }
+GET  /api/jobs/4909f8bea64a    → { "estat_feina": "en_curs", "temps_transcorregut": 38.3,
+                                   "solucions_intermedies": 2, "objectiu_actual": 4530.0, ... }
+(l'usuari s'adona que calia fixar una hora més)
+DELETE /api/jobs/4909f8bea64a  → la feina acaba amb la millor solució trobada
+GET  /api/jobs/4909f8bea64a    → { "estat_feina": "acabada", "resultat": { "estat": "FEASIBLE", ... } }
+```
+
+`objectiu_actual` permet decidir si val la pena esperar més: si porta estona
+sense baixar, atureu la feina i quedeu-vos la solució.
+
+---
+
 ## Codis d'error
 
 | Codi | Quan | Cos |
@@ -341,12 +379,47 @@ L'API està desplegada a **Vercel** com a funció serverless Python.
 | `vercel.json` | Configuració de rutes i `maxDuration` |
 | `requirements.txt` | Dependències de producció |
 | `.vercelignore` | Fitxers exclosos del desplegament (dades locals, tests...) |
+| `Dockerfile` / `docker-compose.yml` | Desplegament en servidor propi (vegeu més avall) |
+
+---
+
+## Desplegament en servidor propi (Docker)
+
+Per a resolucions llargues i per al mode asíncron (`/api/jobs`), desplegueu
+l'API en una màquina pròpia (p. ex. una VM del Proxmox amb Docker):
+
+```bash
+git clone https://github.com/XeviSanmartin/HorarisSolver.git
+cd HorarisSolver
+docker compose up -d --build
+```
+
+L'API queda a `http://<ip-del-servidor>:8000` (Swagger UI a `/docs`).
+
+**Variables d'entorn** (a `docker-compose.yml`):
+
+| Variable | Per defecte | Descripció |
+|---|---|---|
+| `MAX_TEMPS_SOLVER` | `7200` (Docker) / `280` (Vercel) | Límit dur en segons aplicat a `opcions.max_time_seconds` |
+| `CORS_ORIGINS` | `*` | Orígens permesos per a peticions des del navegador, separats per comes (p. ex. l'origen de l'editor d'horaris) |
+
+**Consideracions:**
+
+- **Un sol procés.** No afegiu `--workers N` a uvicorn: el registre de feines
+  asíncrones és en memòria i no es comparteix entre processos. CP-SAT ja
+  paral·lelitza la cerca amb `opcions.num_workers` (threads).
+- **CPU.** Doneu a la VM tots els nuclis que pugueu: és el que més accelera la
+  cerca. Ajusteu `opcions.num_workers` al nombre de nuclis.
+- **Engegada sota demanda.** L'API és *stateless*: podeu tenir la VM apagada i
+  engegar-la només quan calgui (`qm start <vmid>` des del Proxmox).
+- Sense Docker també funciona: `pip install -r requirements.txt uvicorn` i
+  `uvicorn api.index:app --host 0.0.0.0 --port 8000`.
 
 ---
 
 ## Tests
 
-La suite (`tests/test_api.py`, 32 tests) cobreix:
+La suite (`tests/test_api.py`, 38 tests) cobreix:
 
 - **Endpoints**: health, redirecció a docs, OpenAPI, validate (dades reals,
   buides, invàlides), preprocess (estructura + **test de regressió** contra la
@@ -357,6 +430,9 @@ La suite (`tests/test_api.py`, 32 tests) cobreix:
   `INFEASIBLE`) i comportament per defecte (s'ignoren amb avís).
 - **Casos límit de solve**: opcions invàlides, dades infactibles (→
   `INFEASIBLE`), temps de resolució d'1 segon.
+- **CORS i feines asíncrones**: capçaleres CORS, cicle de vida d'una feina
+  (llançar, seguir el progrés, acabar), aturada a mig càlcul conservant la
+  millor solució, feines inexistents (404).
 - **Invariants de la solució real** (es resol `Solver.json` de debò i es
   verifica cada restricció): cap professor a dos llocs alhora, hores exactes per
   professor, desiderata hard respectada, cursos sense forats, màxim 2 classes

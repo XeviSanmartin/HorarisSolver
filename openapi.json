@@ -2,12 +2,12 @@
   "openapi": "3.1.0",
   "info": {
     "title": "API Solver d'horaris Switch2",
-    "description": "\nServei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).\n\n## Flux\n\n1. **`POST /api/validate`** — valida el JSON d'entrada (ràpid, sense resoldre).\n2. **`POST /api/solve`** — preprocessa, construeix el model CP-SAT i resol.\n3. Opcionalment, **`POST /api/preprocess`** per inspeccionar el JSON intermedi (debug).\n\n## Format d'entrada\n\nEl camp `dades` de totes les peticions és el contingut complet d'un fitxer\n**`Solver.json`** de l'editor Switch2: professors (amb desiderata i assignacions\nde mòduls), catàleg de mòduls, cursos, aules, especialitats i restriccions\nopcionals (mòduls coordinats, projectes). Cada camp està descrit a l'apartat\n**Schemas** d'aquesta especificació.\n\nConvencions temporals: `dia` 0–4 (dilluns–divendres), `hora` 0–12 (08:00–20:00;\nel solver només programa les hores 0–10), `subgrup` 1 (1r mig grup), 2 (2n mig\ngrup) o 3 (grup sencer).\n\n## Estats del resultat de `/api/solve`\n\n| `estat` | Significat | `solucio` |\n|---|---|---|\n| `OPTIMAL` | Solució òptima demostrada | present |\n| `FEASIBLE` | Solució vàlida dins del temps límit (pot no ser òptima) | present |\n| `INFEASIBLE` | Les restriccions es contradiuen: cap horari possible | absent |\n| `UNKNOWN` | Temps esgotat sense conclusió: reintenteu amb més temps | absent |\n| `MODEL_INVALID` | Error intern construint el model | absent |\n\n`INFEASIBLE` i `UNKNOWN` **no** són errors HTTP: retornen `200`.\n\n## Funció objectiu\n\nEl solver minimitza `10 × hores_mortes + 20 × preferències_no_respectades`\n(desiderata `tipus: 1`). El valor final és a `solucio.stats.objectiu`.\n",
+    "description": "\nServei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).\n\n## Flux\n\n1. **`POST /api/validate`** — valida el JSON d'entrada (ràpid, sense resoldre).\n2. **`POST /api/solve`** — preprocessa, construeix el model CP-SAT i resol (síncron).\n3. Opcionalment, **`POST /api/preprocess`** per inspeccionar el JSON intermedi (debug).\n\nEn desplegaments persistents (uvicorn local, Docker en un servidor propi) hi ha\ntambé el mode **asíncron**: `POST /api/jobs` llança la resolució en segon pla,\n`GET /api/jobs/{id}` n'informa del progrés i `DELETE /api/jobs/{id}` l'atura\nconservant la millor solució trobada fins al moment.\n\n## Format d'entrada\n\nEl camp `dades` de totes les peticions és el contingut complet d'un fitxer\n**`Solver.json`** de l'editor Switch2: professors (amb desiderata i assignacions\nde mòduls), catàleg de mòduls, cursos, aules, especialitats i restriccions\nopcionals (mòduls coordinats, projectes). Cada camp està descrit a l'apartat\n**Schemas** d'aquesta especificació.\n\nConvencions temporals: `dia` 0–4 (dilluns–divendres), `hora` 0–12 (08:00–20:00;\nel solver només programa les hores 0–10), `subgrup` 1 (1r mig grup), 2 (2n mig\ngrup) o 3 (grup sencer).\n\n## Estats del resultat de `/api/solve`\n\n| `estat` | Significat | `solucio` |\n|---|---|---|\n| `OPTIMAL` | Solució òptima demostrada | present |\n| `FEASIBLE` | Solució vàlida dins del temps límit (pot no ser òptima) | present |\n| `INFEASIBLE` | Les restriccions es contradiuen: cap horari possible | absent |\n| `UNKNOWN` | Temps esgotat sense conclusió: reintenteu amb més temps | absent |\n| `MODEL_INVALID` | Error intern construint el model | absent |\n\n`INFEASIBLE` i `UNKNOWN` **no** són errors HTTP: retornen `200`.\n\n## Funció objectiu\n\nEl solver minimitza `10 × hores_mortes + 20 × preferències_no_respectades`\n(desiderata `tipus: 1`). El valor final és a `solucio.stats.objectiu`.\n",
     "contact": {
       "name": "HorarisSolver",
       "url": "https://github.com/XeviSanmartin/HorarisSolver"
     },
-    "version": "1.2.0"
+    "version": "1.3.0"
   },
   "paths": {
     "/api/health": {
@@ -140,6 +140,141 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DetallError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs": {
+      "post": {
+        "tags": [
+          "Feines"
+        ],
+        "summary": "Llança una resolució en segon pla",
+        "description": "Valida i preprocessa les dades, llança el solver en un fil i retorna a l'instant.\n\nMateix cos de petició que `POST /api/solve`. Consulteu el progrés amb\n`GET /api/jobs/{id}` i atureu-la (conservant la millor solució trobada)\namb `DELETE /api/jobs/{id}`.\n\n**Només fiable en desplegaments persistents d'un sol procés** (uvicorn,\nDocker): el registre de feines viu en memòria.",
+        "operationId": "crea_feina_api_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticioSolve"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaFeinaCreada"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "El cos de la petició no compleix l'esquema (error Pydantic estàndard) o les dades tenen una incoherència estructural profunda (cos `DetallError`)."
+          },
+          "500": {
+            "description": "Error intern construint o resolent el model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetallError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{feina_id}": {
+      "get": {
+        "tags": [
+          "Feines"
+        ],
+        "summary": "Estat i progrés d'una feina",
+        "description": "Retorna l'estat de la feina: progrés mentre `estat_feina` és `en_curs`\n(temps, solucions trobades, objectiu actual), i el `resultat` complet\n(mateix format que `POST /api/solve`) quan és `acabada`.",
+        "operationId": "consulta_feina_api_jobs__feina_id__get",
+        "parameters": [
+          {
+            "name": "feina_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Feina Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaFeina"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feina desconeguda o caducada."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Feines"
+        ],
+        "summary": "Atura una feina en curs",
+        "description": "Demana aturar la cerca. CP-SAT s'atura de manera neta: la feina acaba poc\ndesprés amb la **millor solució trobada fins al moment** (`FEASIBLE`) o\n`UNKNOWN` si encara no n'hi havia cap. Útil quan, a mig càlcul, t'adones\nque calia fixar alguna hora més.",
+        "operationId": "atura_feina_api_jobs__feina_id__delete",
+        "parameters": [
+          {
+            "name": "feina_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Feina Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaFeina"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feina desconeguda o caducada."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -512,6 +647,19 @@
         "title": "GrupCoordinat",
         "description": "Grup de mòduls que han d'impartir-se exactament a la mateixa hora."
       },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
       "ModulCataleg": {
         "properties": {
           "index": {
@@ -781,6 +929,111 @@
         "title": "Professor",
         "description": "Professor amb les seves preferències i assignacions."
       },
+      "RespostaFeina": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "estat_feina": {
+            "type": "string",
+            "title": "Estat Feina",
+            "description": "'en_curs' (el solver treballa), 'acabada' (hi ha `resultat`) o 'error' (hi ha `error`).",
+            "examples": [
+              "en_curs"
+            ]
+          },
+          "aturada_demanada": {
+            "type": "boolean",
+            "title": "Aturada Demanada",
+            "description": "Cert si s'ha demanat aturar la feina amb DELETE. La feina acabarà poc després amb la millor solució trobada (o UNKNOWN si no n'hi havia)."
+          },
+          "temps_transcorregut": {
+            "type": "number",
+            "title": "Temps Transcorregut",
+            "description": "Segons des que la feina ha començat a resoldre."
+          },
+          "solucions_intermedies": {
+            "type": "integer",
+            "title": "Solucions Intermedies",
+            "description": "Nombre de solucions millorades que CP-SAT ha trobat fins ara."
+          },
+          "objectiu_actual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiu Actual",
+            "description": "Valor de la funció objectiu de l'última solució trobada (com més baix, millor). `null` mentre no hi hagi cap solució."
+          },
+          "advertiments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Advertiments"
+          },
+          "resultat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RespostaSolve"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present quan `estat_feina` és 'acabada'."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DetallError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present quan `estat_feina` és 'error'."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "estat_feina",
+          "aturada_demanada",
+          "temps_transcorregut",
+          "solucions_intermedies"
+        ],
+        "title": "RespostaFeina",
+        "description": "Estat d'una feina de resolució asíncrona."
+      },
+      "RespostaFeinaCreada": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Identificador de la feina, per a GET/DELETE /api/jobs/{id}."
+          },
+          "estat_feina": {
+            "type": "string",
+            "title": "Estat Feina",
+            "examples": [
+              "en_curs"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "estat_feina"
+        ],
+        "title": "RespostaFeinaCreada",
+        "description": "Resposta de la creació d'una feina de resolució asíncrona."
+      },
       "RespostaHealth": {
         "properties": {
           "estat": {
@@ -794,7 +1047,7 @@
             "type": "string",
             "title": "Versio Api",
             "examples": [
-              "1.2.0"
+              "1.3.0"
             ]
           },
           "max_temps_solver": {
@@ -1057,6 +1310,46 @@
           "objectiu"
         ],
         "title": "StatsSolucio"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   },
@@ -1072,6 +1365,10 @@
     {
       "name": "Resolució",
       "description": "Construcció i resolució del model CP-SAT."
+    },
+    {
+      "name": "Feines",
+      "description": "Resolució asíncrona: llançar el solver en segon pla, consultar-ne el progrés i aturar-lo conservant la millor solució trobada. **Requereix un desplegament persistent** (uvicorn/Docker): a Vercel cada petició pot anar a una instància diferent i el registre de feines (en memòria) no es comparteix."
     }
   ]
 }
