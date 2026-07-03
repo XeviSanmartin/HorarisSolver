@@ -200,6 +200,7 @@ resolució → formatació de la solució.
 | `incloure_compatible` | bool | `false` | Afegeix `solucio_compatible`: la solució en format `Solver.json`, reimportable a l'editor Switch2 |
 | `fixar_horari` | bool | `false` | Manté **inamovibles** les hores pre-assignades del camp `dades.horari` (les col·locades a mà a l'editor): el solver només col·loca la resta. Redueix l'espai de cerca i el temps de resolució |
 | `periode` | int ≥ 0 | `0` | Període del camp `dades.horari` del qual s'extreuen les hores pre-assignades (l'editor n'exporta 5) |
+| `explicar_infeasible` | bool | `false` | Si el resultat és `INFEASIBLE`, la resposta inclou `motiu_infeasible`: el **mínim de grups de restriccions a relaxar** perquè hi hagi horari (desiderates d'un professor, hores fixades, FOL/anglès, tutoria, mòduls coordinats, projectes, règim de dies...). Té cost: el model porta literals d'assumpció i, si surt `INFEASIBLE`, es fa una segona resolució per minimitzar el conjunt |
 
 El camp `opcions` és opcional (s'apliquen els valors per defecte).
 
@@ -346,6 +347,15 @@ sense baixar, atureu la feina i quedeu-vos la solució.
 Els estats `INFEASIBLE` i `UNKNOWN` **no són errors HTTP**: retornen `200` amb
 `solucio: null`, perquè són resultats vàlids del solver.
 
+**Sobre `motiu_infeasible`** (amb `opcions.explicar_infeasible`): quan el
+resultat és `INFEASIBLE`, és la llista mínima de grups de restriccions que
+caldria relaxar perquè hi hagués horari, p. ex.
+`["Desiderates (hores no disponibles) de Artur Juvé"]`. Una llista **buida**
+vol dir que el conflicte és a les restriccions estructurals (hores exactes per
+professor, solapaments, horaris disponibles de cursos i mòduls), que no es
+poden relaxar. Si la segona resolució no conclou dins del temps, es retorna un
+conjunt suficient (pot incloure grups no essencials).
+
 ---
 
 ## Límits i consideracions de desplegament
@@ -422,7 +432,7 @@ L'API queda a `http://<ip-del-servidor>:8000` (Swagger UI a `/docs`).
 
 ## Tests
 
-La suite (`tests/test_api.py`, 41 tests) cobreix:
+La suite (`tests/test_api.py`, 42 tests) cobreix:
 
 - **Endpoints**: health, redirecció a docs, OpenAPI, validate (dades reals,
   buides, invàlides), preprocess (estructura + **test de regressió** contra la
@@ -435,7 +445,8 @@ La suite (`tests/test_api.py`, 41 tests) cobreix:
   (cada hora fixada apareix exactament al seu slot), fixació impossible (→
   `INFEASIBLE`) i comportament per defecte (s'ignoren amb avís).
 - **Casos límit de solve**: opcions invàlides, dades infactibles (→
-  `INFEASIBLE`), temps de resolució d'1 segon.
+  `INFEASIBLE`), explicació del motiu amb `explicar_infeasible`, temps de
+  resolució d'1 segon.
 - **CORS i feines asíncrones**: capçaleres CORS, cicle de vida d'una feina
   (llançar, seguir el progrés, acabar), aturada a mig càlcul conservant la
   millor solució, feines inexistents (404).

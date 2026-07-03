@@ -369,6 +369,31 @@ def test_solve_infeasible(dades_reals):
     cos = r.json()
     assert cos['estat'] == 'INFEASIBLE', cos['estat']
     assert 'solucio' not in cos or cos.get('solucio') is None
+    # Sense opcions.explicar_infeasible no hi ha motiu (ni el seu cost)
+    assert 'motiu_infeasible' not in cos
+
+
+def test_solve_explicar_infeasible(dades_reals):
+    """Amb explicar_infeasible, un INFEASIBLE diu quins grups cal relaxar.
+
+    Es bloquegen totes les hores d'un professor: el mínim a relaxar han de ser
+    exactament les seves desiderates."""
+    dades = copy.deepcopy(dades_reals)
+    professor = next(p for p in dades['professors']
+                     if p.get('actiu') and p.get('moduls'))
+    professor['desiderata'] = [
+        {'dia': d, 'hora': h, 'tipus': 2} for d in range(5) for h in range(13)
+    ]
+    r = client.post('/api/solve', json={
+        'dades': dades,
+        'opcions': {'max_time_seconds': 120, 'num_workers': 8, 'explicar_infeasible': True},
+    })
+    assert r.status_code == 200, r.text
+    cos = r.json()
+    assert cos['estat'] == 'INFEASIBLE', cos['estat']
+    assert cos.get('motiu_infeasible'), cos.get('motiu_infeasible')
+    assert any(professor['nom'] in motiu for motiu in cos['motiu_infeasible']), (
+        cos['motiu_infeasible'])
 
 
 def test_solve_temps_molt_curt(dades_reals):

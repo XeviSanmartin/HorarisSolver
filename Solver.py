@@ -27,6 +27,15 @@ class HorariSolver:
         # Instància CpSolver activa (per poder aturar la cerca des d'un altre fil)
         self.cp_solver = None
         self.atura_demanada = False
+
+        # Explicació d'infactibilitat (opt-in: costa una mica de rendiment).
+        # Els grups de restriccions "accionables" s'apliquen condicionats a un
+        # literal d'assumpció; si el model és INFEASIBLE, CP-SAT retorna quins
+        # literals formen part del conflicte (motiu_infeasible).
+        self.explicar_infeasible = False
+        self._literals_assumpcio = {}      # clau de grup -> BoolVar
+        self.etiquetes_assumpcions = {}    # índex del literal -> etiqueta llegible
+        self.motiu_infeasible = []
         
         # Variables de decisió
         self.vars_assignacio = {}  # (modul, professor, dia, hora, aula, subgrup)
@@ -112,6 +121,21 @@ class HorariSolver:
                         'simultani': modul_assign.get('simultani', False),
                         'particio': modul_assign.get('particio', [])
                     })
+
+    def _assumpcio(self, clau: str, etiqueta: str):
+        """Literal d'assumpció per a un grup de restriccions (None si desactivat).
+
+        Ús: `c = model.Add(...)` seguit de `if lit is not None: c.OnlyEnforceIf(lit)`.
+        Amb explicar_infeasible actiu, el literal s'assumeix cert en resoldre;
+        si el model és INFEASIBLE, el nucli de conflicte diu quins grups xoquen.
+        """
+        if not self.explicar_infeasible:
+            return None
+        if clau not in self._literals_assumpcio:
+            lit = self.model.NewBoolVar(f"assumpcio_{clau}")
+            self._literals_assumpcio[clau] = lit
+            self.etiquetes_assumpcions[lit.Index()] = etiqueta
+        return self._literals_assumpcio[clau]
 
     def crear_variables(self):
         """Crea les variables de decisió del model """
@@ -699,13 +723,19 @@ class HorariSolver:
                             self.model.Add(te_classe[hora] == 0).OnlyEnforceIf(es_ultima[hora].Not())
                     
                     # Restricció: Tutoria NO pot ser a primera o última hora efectiva
+                    nom_curs = self.curs_per_index.get(curs_idx, {}).get('nom', curs_idx)
+                    lit_tutoria = self._assumpcio(
+                        f"tutoria_m{modul_idx}",
+                        f"Tutoria de {nom_curs} mai a primera ni última hora")
                     for hora in range(self.hores_per_dia):
                         for (m, p, d, h, a, s) in self.vars_assignacio:
                             if m == modul_idx and d == dia and h == hora:
                                 # Aquesta variable ha de ser 0 si l'hora és primera o última
-                                self.model.Add(
+                                c = self.model.Add(
                                     self.vars_assignacio[(m, p, d, h, a, s)] <= 1 - (es_primera[hora] + es_ultima[hora])
                                 )
+                                if lit_tutoria is not None:
+                                    c.OnlyEnforceIf(lit_tutoria)
         
         # 6. Restricció: FOL i Anglès han de ser a primera o última hora efectiva del curs,
         # amb possibilitat d'hores consecutives del mateix mòdul
@@ -717,6 +747,11 @@ class HorariSolver:
 
                 if curs_idx == -1:
                     continue  # Saltar si no està assignat a un curs
+
+                nom_curs = self.curs_per_index.get(curs_idx, {}).get('nom', curs_idx)
+                lit_folang = self._assumpcio(
+                    f"folang_m{modul_idx}",
+                    f"{modul.get('nom', modul_idx)} ({nom_curs}) sempre a primera o última hora (FOL/anglès)")
 
                 for dia in range(self.dies):
                     # Variables per marcar si el mòdul es fa en cada hora
@@ -751,7 +786,7 @@ class HorariSolver:
                         self.model.AddBoolOr([
                             assignat_hora[0],                     # primera
                             assignat_hora[self.hores_per_dia-1]   # última
-                        ]).OnlyEnforceIf(una_hora)
+                        ]).OnlyEnforceIf([una_hora, lit_folang] if lit_folang is not None else una_hora)
 
                     # Restriccions per al cas 2 (dues hores seguides)
                     if self.hores_per_dia >= 2:
@@ -771,21 +806,32 @@ class HorariSolver:
                         ]).OnlyEnforceIf(bloc_final.Not())
 
                         # Només es permet si és bloc d’inici o de final
-                        self.model.AddBoolOr([bloc_inici, bloc_final]).OnlyEnforceIf(dues_hores)
+                        self.model.AddBoolOr([bloc_inici, bloc_final]).OnlyEnforceIf(
+                            [dues_hores, lit_folang] if lit_folang is not None else dues_hores)
 
                     # Casos invàlids: més d’1 i menys de 2 hores → prohibit
-                    self.model.Add(sum(assignat_hora) <= 2)
+                    c = self.model.Add(sum(assignat_hora) <= 2)
+                    if lit_folang is not None:
+                        c.OnlyEnforceIf(lit_folang)
         
         # 7. Restricció: Respectar restriccions horàries dels professors
         for professor in self.professors:
             professor_idx = professor['index']
             restriccions = professor.get('restriccions', {})
-            
+
+            lit_desiderata = None
+            if restriccions.get('no_disponible'):
+                lit_desiderata = self._assumpcio(
+                    f"desiderata_p{professor_idx}",
+                    f"Desiderates (hores no disponibles) de {professor.get('nom', professor_idx)}")
+
             # No disponible
             for dia, hora in restriccions.get('no_disponible', []):
                 for (m, p, d, h, a, s) in self.vars_assignacio:
                     if p == professor_idx and d == dia and h == hora:
-                        self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 0)
+                        c = self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 0)
+                        if lit_desiderata is not None:
+                            c.OnlyEnforceIf(lit_desiderata)
             
             # Prefereix no (penalització, no restricció dura)
             # Aquí podem afegir una penalització a la funció objectiu
@@ -801,19 +847,34 @@ class HorariSolver:
                             hores_diaries.append(self.vars_assignacio[(m, p, d, h, a, s)])
                 
                 # Limitar a 6 hores màxim per dia
+                nom_prof = self.professor_per_index[p_idx].get('nom', p_idx)
                 if hores_diaries and not self.professor_per_index[p_idx].get('7hores', False):
-                    self.model.Add(sum(hores_diaries) <= 6)
+                    c = self.model.Add(sum(hores_diaries) <= 6)
+                    lit = self._assumpcio(f"maxhores_p{p_idx}",
+                                          f"Màxim 6 hores diàries de {nom_prof} (es pot ampliar amb '7hores')")
+                    if lit is not None:
+                        c.OnlyEnforceIf(lit)
                 elif hores_diaries and self.professor_per_index[p_idx].get('7hores', False):
-                    self.model.Add(sum(hores_diaries) <= 7)
+                    c = self.model.Add(sum(hores_diaries) <= 7)
+                    lit = self._assumpcio(f"maxhores_p{p_idx}",
+                                          f"Màxim 7 hores diàries de {nom_prof}")
+                    if lit is not None:
+                        c.OnlyEnforceIf(lit)
 
         # 10. Restricció: Un professor no pot fer classe a primera hora si el dia anterior va tenir classe a última hora
         for p_idx in self.professor_per_index:
+            lit_descans = self._assumpcio(
+                f"descans_p{p_idx}",
+                f"Descans de {self.professor_per_index[p_idx].get('nom', p_idx)}: "
+                f"no pot fer primera hora després d'una última hora")
             for dia in range(1, self.dies):  # Comencem des del segon dia (dia 1)
                 # Si el professor està ocupat l'última hora del dia anterior, no pot estar-ho a primera hora d'avui
-                self.model.Add(
-                    self.slots_ocupats_professor[(p_idx, dia, 0)] <= 
+                c = self.model.Add(
+                    self.slots_ocupats_professor[(p_idx, dia, 0)] <=
                     1 - self.slots_ocupats_professor[(p_idx, dia-1, self.hores_per_dia-1)]
                 )
+                if lit_descans is not None:
+                    c.OnlyEnforceIf(lit_descans)
         
         
 
@@ -837,26 +898,35 @@ class HorariSolver:
                 self.model.Add(sum(classes_dia) == 0).OnlyEnforceIf(te_classe.Not())
                 te_classe_dia.append(te_classe)
             
+            lit_dies = self._assumpcio(
+                f"dies_p{p_idx}",
+                f"Règim de dies de {self.professor_per_index[p_idx].get('nom', p_idx)} "
+                f"(classe dilluns i divendres, dies lliures)")
+
+            def _amb_lit_dies(c):
+                if lit_dies is not None:
+                    c.OnlyEnforceIf(lit_dies)
+
             # Todos deben tener clase lunes y viernes
-            self.model.Add(te_classe_dia[0] == 1)  # Lunes (día 0)
+            _amb_lit_dies(self.model.Add(te_classe_dia[0] == 1))  # Lunes (día 0)
             if self.dies >= 5:
-                self.model.Add(te_classe_dia[4] == 1)  # Viernes (día 4)
-            
+                _amb_lit_dies(self.model.Add(te_classe_dia[4] == 1))  # Viernes (día 4)
+
             # Solo aplicar restricción de días libres a profesores que pueden tenerlos
             if self.professor_per_index[p_idx].get('DiesLliures', False):
                 # Días intermedios (martes a jueves) - simplemente contar cuántos días tienen clase
                 dies_intermedis = te_classe_dia[1:4] if self.dies >= 5 else te_classe_dia[1:self.dies]
-                
+
                 if dies_intermedis:
                     # Al menos deben tener clase 2 de los 3 días intermedios (máximo 1 día libre)
-                    self.model.Add(sum(dies_intermedis) >= len(dies_intermedis) - 1)
-                    
+                    _amb_lit_dies(self.model.Add(sum(dies_intermedis) >= len(dies_intermedis) - 1))
+
                     nom_professor = self.professor_per_index[p_idx]['nom']
                     print(f"  {nom_professor} puede tener como máximo 1 día libre entre martes y jueves")
             else:
                 # Si no tiene DiesLliures, debe tener clase todos los días
                 for dia in range(self.dies):
-                    self.model.Add(te_classe_dia[dia] == 1)
+                    _amb_lit_dies(self.model.Add(te_classe_dia[dia] == 1))
 
 
         
@@ -957,12 +1027,18 @@ class HorariSolver:
                 modul_nom = self.modul_per_index[modul_idx].get('nom', f"Módulo {modul_idx}")
                 print(f"  Aplicando restricciones de horario para proyecto: {modul_nom}")
                 
+                lit_projecte = self._assumpcio(
+                    f"projecte_m{modul_idx}",
+                    f"Projecte {modul_nom}: només als slots d'horaris de projectes")
+
                 # Para cada posible asignación de este módulo
                 for (m, p, d, h, a, s) in self.vars_assignacio:
                     if m == modul_idx:
                         # Si esta combinación día/hora no está en los slots permitidos, prohibirla
                         if (d, h) not in self.slots_projectes:
-                            self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 0)
+                            c = self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 0)
+                            if lit_projecte is not None:
+                                c.OnlyEnforceIf(lit_projecte)
                             restricciones_aplicadas += 1
                 
             print(f"  Se han aplicado {restricciones_aplicadas} restricciones para módulos de proyectos")
@@ -1015,8 +1091,15 @@ class HorariSolver:
                             self.model.Add(sum(vars_j) == 0).OnlyEnforceIf(modul_j_activo.Not())
                             
                             # Crear la implicación bidireccional: i activo ⟺ j activo
-                            self.model.AddImplication(modul_i_activo, modul_j_activo)
-                            self.model.AddImplication(modul_j_activo, modul_i_activo)
+                            lit_coord = self._assumpcio(
+                                f"coord_{nom_grup}",
+                                f"Mòduls coordinats '{nom_grup}' (han d'anar a la mateixa hora)")
+                            if lit_coord is not None:
+                                self.model.AddImplication(modul_i_activo, modul_j_activo).OnlyEnforceIf(lit_coord)
+                                self.model.AddImplication(modul_j_activo, modul_i_activo).OnlyEnforceIf(lit_coord)
+                            else:
+                                self.model.AddImplication(modul_i_activo, modul_j_activo)
+                                self.model.AddImplication(modul_j_activo, modul_i_activo)
                             
                             # Información de debug
                             nom_i = self.modul_per_index[modul_i]['nom'] if modul_i in self.modul_per_index else f"Módulo {modul_i}"
@@ -1201,6 +1284,11 @@ class HorariSolver:
         if self.atura_demanada:
             solver.parameters.max_time_in_seconds = 0.01
 
+        # Literals d'assumpció per explicar l'infactibilitat (si estan actius)
+        if self._literals_assumpcio:
+            self.model.AddAssumptions(list(self._literals_assumpcio.values()))
+            print(f"Explicació d'infactibilitat activa: {len(self._literals_assumpcio)} grups de restriccions")
+
         # Resoldre el model
         start_time = time.time()
         if solution_callback is not None:
@@ -1284,6 +1372,9 @@ class HorariSolver:
             elif status == cp_model.INFEASIBLE:
                 self.ultim_estat = 'INFEASIBLE'
                 print("El model és infactible")
+
+                if self.etiquetes_assumpcions:
+                    self._explica_infactibilitat(solver, max_time_seconds, num_workers)
             else:
                 self.ultim_estat = 'UNKNOWN'
                 print("Estat desconegut")
@@ -1309,13 +1400,20 @@ class HorariSolver:
             m, p, s = fix['modul'], fix['professor'], fix['subgrup']
             d, h, a = fix['dia'], fix['hora'], fix.get('aula', -1)
 
+            nom_prof = self.professor_per_index.get(p, {}).get('nom', p)
+            lit_fixat = self._assumpcio(f"fixat_p{p}", f"Hores fixades a mà de {nom_prof}")
+
             if a != -1 and (m, p, d, h, a, s) in self.vars_assignacio:
-                self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 1)
+                c = self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 1)
+                if lit_fixat is not None:
+                    c.OnlyEnforceIf(lit_fixat)
                 fixades += 1
             else:
                 candidates = vars_per_slot.get((m, p, d, h, s))
                 if candidates:
-                    self.model.Add(sum(candidates) == 1)
+                    c = self.model.Add(sum(candidates) == 1)
+                    if lit_fixat is not None:
+                        c.OnlyEnforceIf(lit_fixat)
                     fixades += 1
                 else:
                     print(f"  AVÍS: no hi ha cap variable per fixar el mòdul {m} del "
@@ -1324,13 +1422,67 @@ class HorariSolver:
         print(f"S'han fixat {fixades} hores pre-assignades")
         return fixades
 
-    def executar(self, fixar_horari: bool = False, **kwargs):
+    def _explica_infactibilitat(self, solver_original, max_time_seconds: float, num_workers: int):
+        """Calcula motiu_infeasible: el mínim de grups de restriccions a relaxar.
+
+        Segona resolució del mateix model amb els literals d'assumpció lliures i
+        l'objectiu de minimitzar quants grups es violen. El resultat és el
+        conjunt mínim (o gairebé) de grups que fan impossible l'horari: molt més
+        útil que el nucli en brut de CP-SAT, que sol ser enorme. Si aquesta
+        segona resolució no conclou dins del temps, es recorre al nucli en brut.
+        """
+        # Nucli en brut, com a pla B
+        nucli = solver_original.SufficientAssumptionsForInfeasibility()
+        nucli_brut = sorted({self.etiquetes_assumpcions[i]
+                             for i in nucli if i in self.etiquetes_assumpcions})
+
+        print("Buscant el mínim de restriccions a relaxar...")
+        lits = list(self._literals_assumpcio.values())
+        self.model.ClearAssumptions()
+        self.model.Minimize(sum(1 - lit for lit in lits))
+
+        solver2 = cp_model.CpSolver()
+        self.cp_solver = solver2  # perquè atura() també funcioni en aquesta fase
+        solver2.parameters.max_time_in_seconds = max_time_seconds
+        solver2.parameters.num_search_workers = num_workers
+        solver2.parameters.log_search_progress = False
+        if self.atura_demanada:
+            solver2.parameters.max_time_in_seconds = 0.01
+
+        status2 = solver2.Solve(self.model)
+
+        if status2 in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+            self.motiu_infeasible = sorted(
+                self.etiquetes_assumpcions[lit.Index()]
+                for lit in lits if solver2.Value(lit) == 0)
+            if status2 != cp_model.OPTIMAL:
+                print("(mínim no demostrat: pot ser que es pugui relaxar menys)")
+        elif status2 == cp_model.INFEASIBLE:
+            # Ni relaxant tots els grups hi ha horari: el conflicte és estructural
+            self.motiu_infeasible = []
+        else:
+            # Temps esgotat: retornem el nucli en brut (suficient, no mínim)
+            self.motiu_infeasible = nucli_brut
+
+        if self.motiu_infeasible:
+            print("Per poder generar un horari cal relaxar com a mínim:")
+            for motiu in self.motiu_infeasible:
+                print(f"  - {motiu}")
+        else:
+            print("El conflicte és a les restriccions estructurals (hores exactes, "
+                  "solapaments, horaris disponibles de cursos/mòduls...)")
+
+    def executar(self, fixar_horari: bool = False, explicar_infeasible: bool = False, **kwargs):
         """Mètode principal per executar tot el procés.
 
         Args:
             fixar_horari: si és cert i les dades contenen hores pre-assignades
                 (horari_fixat), queden forçades a la seva posició exacta.
+            explicar_infeasible: si és cert, en cas d'INFEASIBLE motiu_infeasible
+                conté els grups de restriccions que formen el conflicte
+                (té un cost de rendiment; per defecte desactivat).
         """
+        self.explicar_infeasible = explicar_infeasible
         self.crear_variables()
         self.afegir_restriccions()
         if fixar_horari and self.horari_fixat:

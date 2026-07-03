@@ -42,7 +42,7 @@ MAX_TEMPS_SOLVER = float(os.environ.get('MAX_TEMPS_SOLVER', 280))
 # Per defecte s'accepta qualsevol origen: l'API no té estat ni credencials.
 CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',') if o.strip()]
 
-VERSIO_API = '1.4.0'
+VERSIO_API = '1.5.0'
 
 DESCRIPCIO = """
 Servei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).
@@ -328,6 +328,13 @@ class OpcionsSolve(BaseModel):
         default=0, ge=0,
         description='Període del camp `dades.horari` del qual s\'extreuen les hores '
                     'pre-assignades (l\'editor n\'exporta 5; per defecte el 0).')
+    explicar_infeasible: bool = Field(
+        default=False,
+        description='Si és cert i el resultat és INFEASIBLE, la resposta inclou '
+                    '`motiu_infeasible`: els grups de restriccions que formen el conflicte '
+                    '(desiderates d\'un professor, hores fixades, FOL/anglès, tutoria, '
+                    'mòduls coordinats...). Té un cost de rendiment (el model es resol amb '
+                    'literals d\'assumpció), per això per defecte està desactivat.')
 
 
 class PeticioSolve(BaseModel):
@@ -422,6 +429,13 @@ class RespostaSolve(BaseModel):
     advertiments: list[str] = Field(
         default_factory=list,
         description='Advertiments del validador de dades (informatius).')
+    motiu_infeasible: Optional[list[str]] = Field(
+        default=None,
+        description="Grups de restriccions que formen el conflicte quan l'estat és "
+                    "INFEASIBLE (present només amb `opcions.explicar_infeasible`). "
+                    "El conjunt és suficient per causar la infactibilitat, no "
+                    "necessàriament mínim. Buit = el conflicte és a les restriccions "
+                    "estructurals (hores exactes, solapaments, horaris disponibles).")
 
 
 class DetallError(BaseModel):
@@ -528,7 +542,11 @@ def _construeix_resposta_solve(solver: HorariSolver, solucio: Optional[dict],
                                advertiments: list[str]) -> RespostaSolve:
     """Converteix el resultat del solver en una RespostaSolve."""
     if solucio is None:
-        return RespostaSolve(estat=solver.ultim_estat or 'UNKNOWN', advertiments=advertiments)
+        motiu = None
+        if solver.ultim_estat == 'INFEASIBLE' and solver.explicar_infeasible:
+            motiu = solver.motiu_infeasible
+        return RespostaSolve(estat=solver.ultim_estat or 'UNKNOWN',
+                             advertiments=advertiments, motiu_infeasible=motiu)
 
     solucio_compatible = None
     if opcions.incloure_compatible:
@@ -632,6 +650,7 @@ def solve(peticio: PeticioSolve) -> RespostaSolve:
             solver = HorariSolver(dades_processades)
             solucio = solver.executar(
                 fixar_horari=opcions.fixar_horari,
+                explicar_infeasible=opcions.explicar_infeasible,
                 max_time_seconds=max_time,
                 num_workers=opcions.num_workers,
                 log_search_progress=False,
@@ -702,6 +721,7 @@ def _executa_feina(feina: dict, dades_processades: dict, opcions: OpcionsSolve,
                 solver.atura()
             solucio = solver.executar(
                 fixar_horari=opcions.fixar_horari,
+                explicar_infeasible=opcions.explicar_infeasible,
                 max_time_seconds=max_time,
                 num_workers=opcions.num_workers,
                 log_search_progress=False,

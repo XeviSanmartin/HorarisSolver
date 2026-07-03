@@ -7,7 +7,7 @@
       "name": "HorarisSolver",
       "url": "https://github.com/XeviSanmartin/HorarisSolver"
     },
-    "version": "1.4.0"
+    "version": "1.5.0"
   },
   "paths": {
     "/api/health": {
@@ -820,6 +820,12 @@
             "title": "Periode",
             "description": "Període del camp `dades.horari` del qual s'extreuen les hores pre-assignades (l'editor n'exporta 5; per defecte el 0).",
             "default": 0
+          },
+          "explicar_infeasible": {
+            "type": "boolean",
+            "title": "Explicar Infeasible",
+            "description": "Si és cert i el resultat és INFEASIBLE, la resposta inclou `motiu_infeasible`: els grups de restriccions que formen el conflicte (desiderates d'un professor, hores fixades, FOL/anglès, tutoria, mòduls coordinats...). Té un cost de rendiment (el model es resol amb literals d'assumpció), per això per defecte està desactivat.",
+            "default": false
           }
         },
         "type": "object",
@@ -1063,7 +1069,7 @@
             "type": "string",
             "title": "Versio Api",
             "examples": [
-              "1.4.0"
+              "1.5.0"
             ]
           },
           "max_temps_solver": {
@@ -1155,6 +1161,21 @@
             "type": "array",
             "title": "Advertiments",
             "description": "Advertiments del validador de dades (informatius)."
+          },
+          "motiu_infeasible": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motiu Infeasible",
+            "description": "Grups de restriccions que formen el conflicte quan l'estat és INFEASIBLE (present només amb `opcions.explicar_infeasible`). El conjunt és suficient per causar la infactibilitat, no necessàriament mínim. Buit = el conflicte és a les restriccions estructurals (hores exactes, solapaments, horaris disponibles)."
           }
         },
         "type": "object",
