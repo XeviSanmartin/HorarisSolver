@@ -139,7 +139,7 @@ Cada entrada és una assignació concreta: el professor X imparteix el mòdul Y 
 |---|---|---|
 | `index` | int | Índex del mòdul a `moduls[]` |
 | `hores` | int | Hores setmanals a assignar |
-| `aula` | int | Índex de l'aula preferida a `aules[]` (`-1` = qualsevol) |
+| `aula` | int | Índex de l'aula **preferida** a `aules[]` (`-1` = qualsevol). Vegeu la nota d'aules a sota: si el mòdul té `aules_possibles`, aquesta aula és només una preferència suau i el solver pot reubicar-hi la classe; si no en té, l'hora es fixa en aquesta aula |
 | `subgrup` | 1, 2 o 3 | `1`=1r mig grup, `2`=2n mig grup, `3`=grup sencer |
 | `suport` | bool | És professor de suport (assisteix a un altre professor) |
 | `simultani` | bool | Aquesta classe ha de passar simultàniament amb una altra del mateix mòdul |
@@ -173,7 +173,7 @@ Catàleg de totes les assignatures. No inclou les hores ni els professors (això
 | `curs` | int | Índex del curs a `cursos[]` |
 | `especialitat` | int | Índex a `especialitats[]` |
 | `horari_disponible` | array | Slots `{dia, hora}` on es pot impartir el mòdul (p. ex. només matins o només tardes). **Buit = qualsevol hora.** S'interseca amb l'`horari_disponible` del curs. L'editor omple aquest camp amb els commutadors Matí/Tarda o marcant slots concrets |
-| `aules_possibles` | array | Índexs de les aules on es pot impartir, per requeriments d'espai o equipament. **Buit = qualsevol aula.** Cada hora del mòdul anirà a una aula d'aquest conjunt (un sol element = aula fixa). Té prioritat sobre l'aula preferida de l'assignació del professor (`professors[].moduls[].aula`) |
+| `aules_possibles` | array | Índexs de les aules on es pot impartir, per requeriments d'espai o equipament. **Buit = comportament clàssic:** cada hora es fixa a l'aula preferida de la seva assignació (`professors[].moduls[].aula`), o a qualsevol si és `-1`. **No buit = restricció dura d'espai:** el solver pot triar qualsevol aula d'aquest conjunt per a cada hora, tot **prioritzant** (preferència suau) l'aula preferida de l'assignació. Així una aula saturada no condemna el solver (INFEASIBLE): pot reubicar la classe en una altra aula permesa. Un sol element = aula fixa |
 
 > **Codis especials detectats automàticament pel preprocesador:**
 > - `TUTORIA` al codi o nom → tutoria

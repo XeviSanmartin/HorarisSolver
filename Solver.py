@@ -39,7 +39,12 @@ class HorariSolver:
         
         # Variables de decisió
         self.vars_assignacio = {}  # (modul, professor, dia, hora, aula, subgrup)
-        
+
+        # Variables (una per hora col·locada fora de l'aula preferida de la seva
+        # assignació) que es penalitzen suaument a la funció objectiu, perquè el
+        # solver mantingui l'aula triada a l'editor sempre que sigui possible.
+        self.penalitzacio_aula = []
+
         # Variables auxiliars
         self.hores_programades = {}  # Comptador d'hores programades per mòdul
         self.slots_ocupats_professor = {}  # (professor, dia, hora) -> bool
@@ -197,36 +202,44 @@ class HorariSolver:
 
                     es_hora_tarda = hora >= 6
 
-                    # Determinar aules possibles
-                    if aula_preferida != -1:
-                        # Si hay un aula preferida, verificar restricciones específicas
-                        aula = self.aula_per_index.get(aula_preferida, {})
-
-                        # Verificar restricciones del aula preferida
-                        if (aula.get('nomes_subgrups', False) and subgrup == 3) or \
-                        (aula.get('nomes_tardes', False) and not es_hora_tarda):
-                            continue  # Saltar esta combinación inválida
-
-                        aules_possibles = [aula_preferida]
+                    # Determinar aules possibles per a aquest slot.
+                    #
+                    # - Si el mòdul defineix "aules_possibles", aquest conjunt és la
+                    #   restricció dura (espai/equipament) i el solver pot triar
+                    #   qualsevol de les seves aules; l'aula indicada a l'assignació
+                    #   (triada a l'editor) queda només com a PREFERÈNCIA suau
+                    #   (peso_aula a la funció objectiu). Així, quan una aula se
+                    #   satura, el solver pot reubicar la classe en una altra aula
+                    #   permesa en comptes de quedar condemnat (INFEASIBLE).
+                    # - Si el mòdul no en defineix cap, es manté el comportament
+                    #   clàssic: l'aula de l'assignació es fixa (o qualsevol aula si
+                    #   és -1). Això evita fer créixer el model quan no cal.
+                    if aules_modul is not None:
+                        candidats = aules_modul
+                    elif aula_preferida != -1:
+                        candidats = (aula_preferida,)
                     else:
-                        # Filtrar todas las aulas según las restricciones
-                        aules_possibles = []
-                        for a_idx, aula in self.aula_per_index.items():
-                            # Aula fora del conjunt del mòdul
-                            if aules_modul is not None and a_idx not in aules_modul:
-                                continue
+                        candidats = self.aula_per_index.keys()
 
-                            # Verificar restricciones del aula
-                            if (aula.get('nomes_subgrups', False) and subgrup == 3) or \
-                            (aula.get('nomes_tardes', False) and not es_hora_tarda):
-                                continue  # Saltar esta aula
+                    aules_possibles = []
+                    for aula_idx in candidats:
+                        aula = self.aula_per_index.get(aula_idx)
+                        if aula is None:
+                            continue
+                        # Restriccions pròpies de l'aula per a aquest slot/subgrup
+                        if (aula.get('nomes_subgrups', False) and subgrup == 3) or \
+                           (aula.get('nomes_tardes', False) and not es_hora_tarda):
+                            continue
+                        aules_possibles.append(aula_idx)
 
-                            aules_possibles.append(a_idx)
-                    
                     # Crear variables solo para combinaciones válidas
                     for aula_idx in aules_possibles:
                         var_name = f"m{modul_idx}_p{professor_idx}_d{dia}_h{hora}_a{aula_idx}_s{subgrup}"
-                        self.vars_assignacio[(modul_idx, professor_idx, dia, hora, aula_idx, subgrup)] = self.model.NewBoolVar(var_name)
+                        var = self.model.NewBoolVar(var_name)
+                        self.vars_assignacio[(modul_idx, professor_idx, dia, hora, aula_idx, subgrup)] = var
+                        # Preferència suau per l'aula triada a l'editor
+                        if aula_preferida != -1 and aula_idx != aula_preferida:
+                            self.penalitzacio_aula.append(var)
             
             # Variable comptadora d'hores programades per aquesta assignació
             var_name = f"hores_m{modul_idx}_p{professor_idx}"
@@ -1229,12 +1242,20 @@ class HorariSolver:
         # Definir pesos relativos para cada objetivo (ajustar según prioridades)
         peso_horas_muertas = 10
         peso_preferencias = 20
+        # Pes baix: mantenir l'aula preferida només trenca empats i cedeix davant
+        # d'hores mortes o preferències de professor. El solver reubica el mínim
+        # d'hores necessari quan una aula queda saturada.
+        peso_aula = 1
 
-        objetivo_total = total_horas_muertas * peso_horas_muertas + preferencias_no_respetadas * peso_preferencias
+        objetivo_total = (total_horas_muertas * peso_horas_muertas
+                          + preferencias_no_respetadas * peso_preferencias
+                          + sum(self.penalitzacio_aula) * peso_aula)
 
         # Añadir la función objetivo al modelo
         self.model.Minimize(objetivo_total)
-        print(f"  Objetivo configurado: {peso_horas_muertas}*horas_muertas + {peso_preferencias}*preferencias_no_respetadas")
+        print(f"  Objetivo configurado: {peso_horas_muertas}*horas_muertas "
+              f"+ {peso_preferencias}*preferencias_no_respetadas "
+              f"+ {peso_aula}*aules_no_preferides ({len(self.penalitzacio_aula)} vars)")
 
 
 
