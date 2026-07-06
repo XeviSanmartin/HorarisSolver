@@ -17,7 +17,7 @@ restriccions i decisions/paranys coneguts.
   cursos, mòduls, aules, especialitats, `projectes`, `horaris_projectes`.
 - `exportar_html.py`, `switch2.py` — utilitats/exportació.
 - Docs: **`DOC_API_SOLVER.md`**, `API_REST.md`, `openapi.json`, `DESPLEGAMENT.md`,
-  `HORES_FIXADES.md`. Versió API actual: **1.7.0**.
+  `HORES_FIXADES.md`. Versió API actual: **1.7.1**.
   - `openapi.json` i `dades_solver_processades.json` són fitxers "daurats" verificats
     per tests: regenera'ls amb `scripts/exporta_openapi.py` i carregant
     `BuitRestriccions.json` a `HorariData().exporta_dades_processades(...)` quan canviïn
@@ -74,12 +74,20 @@ franges (compatibilitat amb dades antigues).
   professor d'aquest règim (per a professorat amb hores fora del departament o molt
   poques). No afecta màx hores, descans ni desiderates.
 
+- **Regles de posició** (per mòdul/curs): FOL/anglès sempre a **primera o última** hora
+  del curs (restr. 6) i tutoria **mai** a primera/última (restr. 5).
+
 - **Hores fixades exemptes** (`fixar_horari` + `horari_fixat`). Les hores posades a mà
-  compten com a **context** però **no es validen entre elles** ni contra les seves
-  desiderates. `self.slots_fixats_per_prof` + `self._es_fixat(p,d,h)` (només cert quan
-  `fixar_horari` és actiu). Exempció aplicada a: màx hores/dia (límit = `max(base,
-  fixades)`), descans 12 h (parelles totes-fixades), `no_disponible` (slots fixats) i
-  penalització `prefereix_no` (slots fixats).
+  compten com a **context** però **no es validen** contra cap regla de política (ni
+  entre elles ni contra les seves desiderates). Helpers:
+  - `self.slots_fixats_per_prof` + `self._es_fixat(p,d,h)` → exempció **per professor**:
+    màx hores/dia (límit = `max(base, fixades)`), descans 12 h (parelles totes-fixades),
+    `no_disponible` (slots fixats) i penalització `prefereix_no` (slots fixats).
+  - `self.slots_fixats_per_modul` + `self._modul_dia_fixat(m,dia)` → exempció de les
+    **regles de posició** (restr. 5 i 6): si el mòdul té una hora fixada aquell dia, no
+    se li valida la posició (FOL/anglès/tutoria).
+  - Les impossibilitats físiques (professor/aula/curs a dos llocs alhora) NO s'eximeixen
+    mai. Tot plegat només actua amb `fixar_horari` actiu.
 
 - **`ignora_hores_grogues`** (opció de `/api/solve`, API 1.6.0): quan és certa, no
   s'afegeix la penalització de `prefereix_no` (desiderata tipus 1, grogues). Les
