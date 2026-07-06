@@ -17,10 +17,18 @@ restriccions i decisions/paranys coneguts.
   cursos, mòduls, aules, especialitats, `projectes`, `horaris_projectes`.
 - `exportar_html.py`, `switch2.py` — utilitats/exportació.
 - Docs: **`DOC_API_SOLVER.md`**, `API_REST.md`, `openapi.json`, `DESPLEGAMENT.md`,
-  `HORES_FIXADES.md`. Versió API actual: **1.5.0**.
+  `HORES_FIXADES.md`. Versió API actual: **1.7.0**.
+  - `openapi.json` i `dades_solver_processades.json` són fitxers "daurats" verificats
+    per tests: regenera'ls amb `scripts/exporta_openapi.py` i carregant
+    `BuitRestriccions.json` a `HorariData().exporta_dades_processades(...)` quan canviïn
+    l'API o `genera_dades_processades`.
 
 Format d'entrada = el mateix export de l'editor (`professors/cursos/moduls/aules/
-especialitats/horari` + `moduls_coordinats/projectes/horaris_projectes`).
+especialitats/horari` + `moduls_coordinats/projectes/horaris_projectes`). L'editor
+també envia `config` (`horesSetmana`, `horaIniciTarda`); el solver en dedueix el
+nombre de franges (`hores_per_dia`) i el minut d'inici de cada una (`hores_inici_min`,
+per al descans entre dies). Sense `config` fa servir uns valors per defecte de 11
+franges (compatibilitat amb dades antigues).
 
 ## Model de restriccions (el que cal saber)
 
@@ -53,6 +61,29 @@ especialitats/horari` + `moduls_coordinats/projectes/horaris_projectes`).
   ("el projecte només pot anar als slots d'horari de projectes"). L'editor ja **no**
   fa servir aquesta funció (les franges de projecte es posen amb `horari_disponible`);
   mantenir tots dos camps buits.
+
+- **Descans de 12 h entre dies** (restricció 10, reescrita). Es prohibeix qualsevol
+  parella de classes d'un professor en dies consecutius separades per **< 12 h**
+  (durada de classe assumida: 60 min; usa `hores_inici_min`). Substitueix la regla
+  antiga "primera hora si última ahir". Aplica a TOTS els professors (els "lliures"
+  NO se la salten).
+
+- **Règim de dies** (restricció 12): exigeix classe dilluns i divendres i limita els
+  dies lliures. Només s'aplica si `controlable` **i no** `lliureRestriccions`. El camp
+  **`lliureRestriccions`** (casella "Lliure de restriccions" de l'editor) allibera el
+  professor d'aquest règim (per a professorat amb hores fora del departament o molt
+  poques). No afecta màx hores, descans ni desiderates.
+
+- **Hores fixades exemptes** (`fixar_horari` + `horari_fixat`). Les hores posades a mà
+  compten com a **context** però **no es validen entre elles** ni contra les seves
+  desiderates. `self.slots_fixats_per_prof` + `self._es_fixat(p,d,h)` (només cert quan
+  `fixar_horari` és actiu). Exempció aplicada a: màx hores/dia (límit = `max(base,
+  fixades)`), descans 12 h (parelles totes-fixades), `no_disponible` (slots fixats) i
+  penalització `prefereix_no` (slots fixats).
+
+- **`ignora_hores_grogues`** (opció de `/api/solve`, API 1.6.0): quan és certa, no
+  s'afegeix la penalització de `prefereix_no` (desiderata tipus 1, grogues). Les
+  vermelles (tipus 2, `no_disponible`) segueixen sent dures.
 
 - **Objectiu** (`Solver.py:~1236`, es minimitza):
   `10·hores_mortes + 20·preferències_no_respectades + 1·aules_no_preferides`.
