@@ -93,13 +93,17 @@ class HorariSolver:
         self.fixar_horari = False
         self.slots_fixats_per_prof = {}
         self.slots_fixats_per_modul = {}
+        self.fixats_mpdhs = set()   # (modul, professor, dia, hora, subgrup) fixats
         for _fix in self.horari_fixat:
             _p, _d, _h, _m = (_fix.get('professor'), _fix.get('dia'),
                               _fix.get('hora'), _fix.get('modul'))
+            _s = _fix.get('subgrup', 3)
             if _p is not None and _d is not None and _h is not None:
                 self.slots_fixats_per_prof.setdefault(_p, set()).add((_d, _h))
             if _m is not None and _d is not None and _h is not None:
                 self.slots_fixats_per_modul.setdefault(_m, set()).add((_d, _h))
+            if _m is not None and _p is not None and _d is not None and _h is not None:
+                self.fixats_mpdhs.add((_m, _p, _d, _h, _s))
 
         # Índex per a accés ràpid
         self.modul_per_index = {m['index']: m for m in self.moduls if 'index' in m}
@@ -170,6 +174,12 @@ class HorariSolver:
         if not self.fixar_horari:
             return False
         return any(d == dia for (d, _h) in self.slots_fixats_per_modul.get(modul, set()))
+
+    def _var_es_fixada(self, m, p, d, h, s):
+        """Cert si la variable correspon a una hora fixada manualment (amb
+        fixar_horari actiu): queda exclosa de la validació d'ocupació del curs
+        entre hores fixades (només actua com a context per a la resta)."""
+        return self.fixar_horari and (m, p, d, h, s) in self.fixats_mpdhs
 
     def _assumpcio(self, clau: str, etiqueta: str):
         """Literal d'assumpció per a un grup de restriccions (None si desactivat).
@@ -413,17 +423,34 @@ class HorariSolver:
                     self.model.Add(sum(slot_vars) <= 1)
         
         # 3. Restricció: Una aula no pot tenir més d'una classe alhora (excepte mòduls simultanis del mateix tipus)
+        # Les hores FIXADES a mà queden excloses de la validació entre elles i
+        # actuen com a context: el solver no pot posar-hi un mòdul diferent,
+        # però sí afegir-se al mateix mòdul (reunions, suports).
         for a_idx in self.aula_per_index:
             for dia in range(self.dies):
                 for hora in range(self.hores_per_dia):
-                    # Agrupar variables por módulo
+                    # Agrupar variables por módulo (només les NO fixades)
                     vars_por_modulo = {}
+                    fixades_aula = []          # (modul, var) fixades en aquesta aula/hora
                     for (m, p, d, h, a, s) in self.vars_assignacio:
                         if a == a_idx and d == dia and h == hora:
+                            var = self.vars_assignacio[(m, p, d, h, a, s)]
+                            if self._var_es_fixada(m, p, d, h, s):
+                                fixades_aula.append((m, var))
+                                continue
                             if m not in vars_por_modulo:
                                 vars_por_modulo[m] = []
-                            vars_por_modulo[m].append(self.vars_assignacio[(m, p, d, h, a, s)])
-                    
+                            vars_por_modulo[m].append(var)
+
+                    # Context de les fixades: cap mòdul DIFERENT del solver pot
+                    # coincidir amb una hora fixada en aquesta aula
+                    for mf, fv in fixades_aula:
+                        for m2, vars2 in vars_por_modulo.items():
+                            if m2 == mf:
+                                continue   # mateix mòdul: s'hi pot afegir
+                            for nv in vars2:
+                                self.model.Add(nv + fv <= 1)
+
                     # Crear variables para indicar si cada módulo está activo en este slot
                     modulo_activo = {}
                     for m, vars_m in vars_por_modulo.items():
@@ -465,58 +492,71 @@ class HorariSolver:
                     if len(tipo_activo) > 1:
                         self.model.Add(sum(tipo_activo.values()) <= 1)
                     
-                    # Actualizar variable de ocupación del aula
+                    # Actualizar variable de ocupación del aula (inclou fixades)
                     todas_las_vars = [var for vars_list in vars_por_modulo.values() for var in vars_list]
+                    todas_las_vars += [fv for _mf, fv in fixades_aula]
                     if todas_las_vars:
                         self.model.Add(sum(todas_las_vars) >= 1).OnlyEnforceIf(self.slots_ocupats_aula[(a_idx, dia, hora)])
                         self.model.Add(sum(todas_las_vars) == 0).OnlyEnforceIf(self.slots_ocupats_aula[(a_idx, dia, hora)].Not())
                     else:
                         self.model.Add(self.slots_ocupats_aula[(a_idx, dia, hora)] == 0)
 
-        # 4. Restricció: Un curs no pot tenir més d'una classe alhora (excepte subgrups del mateix mòdul)
+        # 4. Restricció: Un curs no pot tenir més d'una classe alhora (excepte
+        # subgrups del mateix mòdul).
+        #
+        # Les hores FIXADES a mà (fixar_horari) queden excloses de la validació
+        # entre elles (p. ex. una reunió amb tots els professors al mateix slot)
+        # i només actuen com a context: el solver no hi pot col·locar una classe
+        # que hi xoqui, però SÍ pot "afegir-se" a una hora fixada del mateix
+        # mòdul i subgrup (professor que s'incorpora a la reunió, o suport que
+        # acompanya el titular).
         for c_idx in self.curs_per_index:
             for dia in range(self.dies):
                 for hora in range(self.hores_per_dia):
-                    # Agrupar variables per mòdul i subgrup
+                    # Agrupar variables per mòdul i subgrup (només les NO fixades);
+                    # les fixades es recullen a part com a context.
                     vars_per_modul_subgrup = {}
-                    
+                    fixades_slot = []            # (modul, subgrup, var) fixades
+                    fixats_ms = set()            # (modul, subgrup) amb hora fixada
+
                     for (m, p, d, h, a, s) in self.vars_assignacio:
-                        if (m in self.modul_per_index and 
-                            self.modul_per_index[m].get('curs') == c_idx and 
+                        if (m in self.modul_per_index and
+                            self.modul_per_index[m].get('curs') == c_idx and
                             d == dia and h == hora):
-                            
+
+                            var = self.vars_assignacio[(m, p, d, h, a, s)]
+                            if self._var_es_fixada(m, p, d, h, s):
+                                fixades_slot.append((m, s, var))
+                                fixats_ms.add((m, s))
+                                continue
+
                             # Agrupar per mòdul
                             if m not in vars_per_modul_subgrup:
                                 vars_per_modul_subgrup[m] = {1: [], 2: [], 3: []}
-                            
+
                             # Afegir variable al grup corresponent
-                            vars_per_modul_subgrup[m][s].append(self.vars_assignacio[(m, p, d, h, a, s)])
-                    
+                            vars_per_modul_subgrup[m][s].append(var)
+
                     # Per cada mòdul, aplicar les restriccions
                     for modul_idx, subgrups in vars_per_modul_subgrup.items():
-                        # 1. No es pot tenir més d'una classe del grup sencer (subgrup 3)
-                        if subgrups[3]:
-                            self.model.Add(sum(subgrups[3]) <= 1)
-                        
-                        # 2. No es pot tenir més d'una classe del subgrup 1
-                        if subgrups[1]:
-                            self.model.Add(sum(subgrups[1]) <= 1)
-                        
-                        # 3. No es pot tenir més d'una classe del subgrup 2
-                        if subgrups[2]:
-                            self.model.Add(sum(subgrups[2]) <= 1)
-                        
+                        # 1-3. No es pot tenir més d'una classe del mateix subgrup.
+                        # Si el mòdul ja té una hora FIXADA d'aquest subgrup en
+                        # aquest slot, el límit no s'aplica: les hores del solver
+                        # s'hi poden afegir (reunions, suports).
+                        for sg in (1, 2, 3):
+                            if subgrups[sg] and (modul_idx, sg) not in fixats_ms:
+                                self.model.Add(sum(subgrups[sg]) <= 1)
+
                         # 4. No es pot tenir el grup sencer i algun subgrup alhora
                         grup_sencer_vars = subgrups[3]
                         subgrup_vars = subgrups[1] + subgrups[2]
-                        
+
                         if grup_sencer_vars and subgrup_vars:
                             # Si hi ha classe de grup sencer, no pot haver-hi de subgrup
                             grup_sencer_var = self.model.NewBoolVar(f"grup_sencer_{modul_idx}_{dia}_{hora}")
                             self.model.Add(sum(grup_sencer_vars) >= 1).OnlyEnforceIf(grup_sencer_var)
                             self.model.Add(sum(grup_sencer_vars) == 0).OnlyEnforceIf(grup_sencer_var.Not())
-                            
-                            self.model.AddImplication(grup_sencer_var, self.model.NewBoolVar("zero").Not())
+
                             for var in subgrup_vars:
                                 self.model.AddImplication(grup_sencer_var, var.Not())
 
@@ -530,12 +570,12 @@ class HorariSolver:
                             subgrup1_actiu[modul_idx] = self.model.NewBoolVar(f"subgrup1_{modul_idx}_actiu_{dia}_{hora}")
                             self.model.Add(sum(subgrups[1]) >= 1).OnlyEnforceIf(subgrup1_actiu[modul_idx])
                             self.model.Add(sum(subgrups[1]) == 0).OnlyEnforceIf(subgrup1_actiu[modul_idx].Not())
-                        
+
                         if subgrups[2]:
                             subgrup2_actiu[modul_idx] = self.model.NewBoolVar(f"subgrup2_{modul_idx}_actiu_{dia}_{hora}")
                             self.model.Add(sum(subgrups[2]) >= 1).OnlyEnforceIf(subgrup2_actiu[modul_idx])
                             self.model.Add(sum(subgrups[2]) == 0).OnlyEnforceIf(subgrup2_actiu[modul_idx].Not())
-                        
+
                         if subgrups[3]:
                             grup_sencer_actiu[modul_idx] = self.model.NewBoolVar(f"grup_sencer_{modul_idx}_actiu_{dia}_{hora}")
                             self.model.Add(sum(subgrups[3]) >= 1).OnlyEnforceIf(grup_sencer_actiu[modul_idx])
@@ -556,18 +596,31 @@ class HorariSolver:
                     if grup_sencer_actiu and (subgrup1_actiu or subgrup2_actiu):
                         # Variable que indica si hay algún grupo entero activo para este curso en este slot
                         algun_grup_sencer = self.model.NewBoolVar(f"algun_grup_sencer_c{c_idx}_d{dia}_h{hora}")
-                        
+
                         # algun_grup_sencer es true si al menos un grup_sencer_actiu es true
                         self.model.Add(sum(grup_sencer_actiu.values()) >= 1).OnlyEnforceIf(algun_grup_sencer)
                         self.model.Add(sum(grup_sencer_actiu.values()) == 0).OnlyEnforceIf(algun_grup_sencer.Not())
-                        
+
                         # Si algun_grup_sencer es true, todos los subgrupos deben estar inactivos
                         for sg1 in subgrup1_actiu.values():
                             self.model.AddImplication(algun_grup_sencer, sg1.Not())
-                            
+
                         for sg2 in subgrup2_actiu.values():
                             self.model.AddImplication(algun_grup_sencer, sg2.Not())
-        
+
+                    # Context de les hores fixades: una hora del solver no pot
+                    # xocar amb una de fixada. Xoca si: és d'un ALTRE mòdul amb
+                    # el mateix subgrup, o alguna de les dues és de grup sencer.
+                    # (Mateix mòdul i mateix subgrup NO xoca: s'hi afegeix.)
+                    for mf, sf, fv in fixades_slot:
+                        for m2, subgrups2 in vars_per_modul_subgrup.items():
+                            for s2 in (1, 2, 3):
+                                if m2 == mf and s2 == sf:
+                                    continue  # es pot afegir a l'hora fixada
+                                if s2 == sf or s2 == 3 or sf == 3:
+                                    for nv in subgrups2[s2]:
+                                        self.model.Add(nv + fv <= 1)
+
 
         # 4.1 Hores consecutives per curs
         for c_idx in self.curs_per_index:

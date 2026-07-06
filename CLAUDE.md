@@ -86,8 +86,15 @@ franges (compatibilitat amb dades antigues).
   - `self.slots_fixats_per_modul` + `self._modul_dia_fixat(m,dia)` → exempció de les
     **regles de posició** (restr. 5 i 6): si el mòdul té una hora fixada aquell dia, no
     se li valida la posició (FOL/anglès/tutoria).
-  - Les impossibilitats físiques (professor/aula/curs a dos llocs alhora) NO s'eximeixen
-    mai. Tot plegat només actua amb `fixar_horari` actiu.
+  - `self.fixats_mpdhs` + `self._var_es_fixada(m,p,d,h,s)` → exempció de l'**ocupació
+    d'aula (restr. 3) i de curs (restr. 4)** entre hores fixades. Cas clau: una
+    **reunió** amb molts professors al mateix mòdul/slot/aula (abans donava INFEASIBLE
+    "hores fixades a mà de tothom"). Les fixades actuen com a context: el solver no hi
+    pot posar un mòdul diferent que xoqui, però **sí afegir-s'hi** (mateix mòdul i
+    subgrup → professor que s'incorpora a la reunió o suport que acompanya el titular).
+  - Només queda dura entre fixades la restricció "un professor no pot ser a dos llocs
+    alhora" (l'editor tampoc no permet dues classes del mateix professor en una cel·la).
+    Tot plegat només actua amb `fixar_horari` actiu.
 
 - **`ignora_hores_grogues`** (opció de `/api/solve`, API 1.6.0): quan és certa, no
   s'afegeix la penalització de `prefereix_no` (desiderata tipus 1, grogues). Les
