@@ -33,6 +33,9 @@ class HorariSolver:
         # literal d'assumpció; si el model és INFEASIBLE, CP-SAT retorna quins
         # literals formen part del conflicte (motiu_infeasible).
         self.explicar_infeasible = False
+        # Si és cert, s'ignoren les preferències "prefereix no" (hores grogues,
+        # desiderata tipus 1): no s'afegeix cap penalització a la funció objectiu.
+        self.ignora_hores_grogues = False
         self._literals_assumpcio = {}      # clau de grup -> BoolVar
         self.etiquetes_assumpcions = {}    # índex del literal -> etiqueta llegible
         self.motiu_infeasible = []
@@ -1216,10 +1219,14 @@ class HorariSolver:
                             total_horas_muertas += hora_muerta
 
         # 2. Minimizar horas que los profesores prefieren no tener clase
+        #    (hores grogues, desiderata tipus 1). Amb ignora_hores_grogues no
+        #    s'afegeix cap penalització (el bucle no itera cap professor).
         print("  Configurando minimización de horas no preferidas...")
         preferencias_no_respetadas = 0
+        if self.ignora_hores_grogues:
+            print("  Preferències 'prefereix no' (hores grogues) IGNORADES per opció.")
 
-        for professor in self.professors:
+        for professor in ([] if self.ignora_hores_grogues else self.professors):
             p_idx = professor['index']
             restriccions = professor.get('restriccions', {})
             nom_professor = professor.get('nom', f"Profesor {p_idx}")
@@ -1493,7 +1500,8 @@ class HorariSolver:
             print("El conflicte és a les restriccions estructurals (hores exactes, "
                   "solapaments, horaris disponibles de cursos/mòduls...)")
 
-    def executar(self, fixar_horari: bool = False, explicar_infeasible: bool = False, **kwargs):
+    def executar(self, fixar_horari: bool = False, explicar_infeasible: bool = False,
+                 ignora_hores_grogues: bool = False, **kwargs):
         """Mètode principal per executar tot el procés.
 
         Args:
@@ -1502,8 +1510,12 @@ class HorariSolver:
             explicar_infeasible: si és cert, en cas d'INFEASIBLE motiu_infeasible
                 conté els grups de restriccions que formen el conflicte
                 (té un cost de rendiment; per defecte desactivat).
+            ignora_hores_grogues: si és cert, s'ignoren les preferències
+                "prefereix no" (hores grogues, desiderata tipus 1); les hores
+                "no disponible" (vermelles, tipus 2) segueixen sent dures.
         """
         self.explicar_infeasible = explicar_infeasible
+        self.ignora_hores_grogues = ignora_hores_grogues
         self.crear_variables()
         self.afegir_restriccions()
         if fixar_horari and self.horari_fixat:

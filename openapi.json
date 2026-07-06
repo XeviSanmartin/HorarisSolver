@@ -7,7 +7,7 @@
       "name": "HorarisSolver",
       "url": "https://github.com/XeviSanmartin/HorarisSolver"
     },
-    "version": "1.5.0"
+    "version": "1.6.0"
   },
   "paths": {
     "/api/health": {
@@ -821,6 +821,12 @@
             "description": "Període del camp `dades.horari` del qual s'extreuen les hores pre-assignades (l'editor n'exporta 5; per defecte el 0).",
             "default": 0
           },
+          "ignora_hores_grogues": {
+            "type": "boolean",
+            "title": "Ignora Hores Grogues",
+            "description": "Si és cert, el solver ignora les preferències \"prefereix no\" dels professors (les hores grogues, desiderata tipus 1): no les penalitza a la funció objectiu. Les hores \"no disponible\" (vermelles, tipus 2) continuen sent restriccions dures.",
+            "default": false
+          },
           "explicar_infeasible": {
             "type": "boolean",
             "title": "Explicar Infeasible",
@@ -1069,7 +1075,7 @@
             "type": "string",
             "title": "Versio Api",
             "examples": [
-              "1.5.0"
+              "1.6.0"
             ]
           },
           "max_temps_solver": {

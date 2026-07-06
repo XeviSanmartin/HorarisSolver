@@ -42,7 +42,7 @@ MAX_TEMPS_SOLVER = float(os.environ.get('MAX_TEMPS_SOLVER', 280))
 # Per defecte s'accepta qualsevol origen: l'API no té estat ni credencials.
 CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',') if o.strip()]
 
-VERSIO_API = '1.5.0'
+VERSIO_API = '1.6.0'
 
 DESCRIPCIO = """
 Servei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).
@@ -328,6 +328,12 @@ class OpcionsSolve(BaseModel):
         default=0, ge=0,
         description='Període del camp `dades.horari` del qual s\'extreuen les hores '
                     'pre-assignades (l\'editor n\'exporta 5; per defecte el 0).')
+    ignora_hores_grogues: bool = Field(
+        default=False,
+        description="Si és cert, el solver ignora les preferències \"prefereix no\" dels "
+                    "professors (les hores grogues, desiderata tipus 1): no les penalitza a "
+                    "la funció objectiu. Les hores \"no disponible\" (vermelles, tipus 2) "
+                    "continuen sent restriccions dures.")
     explicar_infeasible: bool = Field(
         default=False,
         description='Si és cert i el resultat és INFEASIBLE, la resposta inclou '
@@ -651,6 +657,7 @@ def solve(peticio: PeticioSolve) -> RespostaSolve:
             solucio = solver.executar(
                 fixar_horari=opcions.fixar_horari,
                 explicar_infeasible=opcions.explicar_infeasible,
+                ignora_hores_grogues=opcions.ignora_hores_grogues,
                 max_time_seconds=max_time,
                 num_workers=opcions.num_workers,
                 log_search_progress=False,
@@ -722,6 +729,7 @@ def _executa_feina(feina: dict, dades_processades: dict, opcions: OpcionsSolve,
             solucio = solver.executar(
                 fixar_horari=opcions.fixar_horari,
                 explicar_infeasible=opcions.explicar_infeasible,
+                ignora_hores_grogues=opcions.ignora_hores_grogues,
                 max_time_seconds=max_time,
                 num_workers=opcions.num_workers,
                 log_search_progress=False,
