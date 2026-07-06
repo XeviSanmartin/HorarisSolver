@@ -42,7 +42,7 @@ MAX_TEMPS_SOLVER = float(os.environ.get('MAX_TEMPS_SOLVER', 280))
 # Per defecte s'accepta qualsevol origen: l'API no té estat ni credencials.
 CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',') if o.strip()]
 
-VERSIO_API = '1.6.0'
+VERSIO_API = '1.7.0'
 
 DESCRIPCIO = """
 Servei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).
@@ -161,6 +161,9 @@ class Professor(BaseModel):
     DiesLliures: bool = Field(default=False, description='Pot tenir fins a 1 dia lliure entre dimarts i dijous.')
     controlable: bool = Field(default=False,
                               description="Si és fals, no s'apliquen les restriccions de dies lliures ni de dilluns/divendres.")
+    lliureRestriccions: bool = Field(default=False,
+                                     description="Si és cert, el professor és lliure de restriccions de règim: no "
+                                                 "se li exigeix classe dilluns/divendres i pot tenir diversos dies lliures.")
     desiderata: list[Desiderata] = Field(default_factory=list)
     moduls: list[ModulProfessor] = Field(default_factory=list)
 

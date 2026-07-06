@@ -7,7 +7,7 @@
       "name": "HorarisSolver",
       "url": "https://github.com/XeviSanmartin/HorarisSolver"
     },
-    "version": "1.6.0"
+    "version": "1.7.0"
   },
   "paths": {
     "/api/health": {
@@ -931,6 +931,12 @@
             "description": "Si és fals, no s'apliquen les restriccions de dies lliures ni de dilluns/divendres.",
             "default": false
           },
+          "lliureRestriccions": {
+            "type": "boolean",
+            "title": "Lliurerestriccions",
+            "description": "Si és cert, el professor és lliure de restriccions de règim: no se li exigeix classe dilluns/divendres i pot tenir diversos dies lliures.",
+            "default": false
+          },
           "desiderata": {
             "items": {
               "$ref": "#/components/schemas/Desiderata"
@@ -1075,7 +1081,7 @@
             "type": "string",
             "title": "Versio Api",
             "examples": [
-              "1.6.0"
+              "1.7.0"
             ]
           },
           "max_temps_solver": {

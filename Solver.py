@@ -17,6 +17,19 @@ class HorariSolver:
         self.dies = self.config['dies_setmana']
         self.hores_per_dia = self.config['hores_per_dia']
         self.total_slots = self.dies * self.hores_per_dia
+
+        # Minut d'inici de cada franja (des de mitjanit), per calcular el descans
+        # de 12h entre dies. Ve de la config de l'editor; si no, valors per
+        # defecte de l'institut (08:00 … 20:05).
+        DEFECTE_MIN = [480, 540, 630, 690, 750, 810, 900, 960, 1020, 1095, 1150, 1205]
+        self.hores_inici_min = self.config.get('hores_inici_min')
+        if not self.hores_inici_min or len(self.hores_inici_min) < self.hores_per_dia:
+            if self.hores_per_dia <= len(DEFECTE_MIN):
+                self.hores_inici_min = DEFECTE_MIN[:self.hores_per_dia]
+            else:
+                self.hores_inici_min = DEFECTE_MIN + [
+                    DEFECTE_MIN[-1] + 60 * (i + 1)
+                    for i in range(self.hores_per_dia - len(DEFECTE_MIN))]
         
         # Inicialització del model
         self.model = cp_model.CpModel()
@@ -72,7 +85,18 @@ class HorariSolver:
         # Hores pre-assignades (normalitzades pel preprocessador) que es poden
         # forçar amb executar(fixar_horari=True)
         self.horari_fixat = dades.get('horari_fixat', [])
-        
+
+        # Slots (dia, hora) fixats manualment, per professor. Amb fixar_horari
+        # actiu, aquestes hores compten com a context però NO es validen entre
+        # elles (ni contra les seves desiderates): les restriccions per professor
+        # només s'apliquen a les hores que decideix el solver.
+        self.fixar_horari = False
+        self.slots_fixats_per_prof = {}
+        for _fix in self.horari_fixat:
+            _p, _d, _h = _fix.get('professor'), _fix.get('dia'), _fix.get('hora')
+            if _p is not None and _d is not None and _h is not None:
+                self.slots_fixats_per_prof.setdefault(_p, set()).add((_d, _h))
+
         # Índex per a accés ràpid
         self.modul_per_index = {m['index']: m for m in self.moduls if 'index' in m}
         self.professor_per_index = {p['index']: p for p in self.professors if 'index' in p}
@@ -129,6 +153,11 @@ class HorariSolver:
                         'simultani': modul_assign.get('simultani', False),
                         'particio': modul_assign.get('particio', [])
                     })
+
+    def _es_fixat(self, professor, dia, hora):
+        """Cert si (dia,hora) és una hora fixada manualment del professor amb
+        fixar_horari actiu (llavors queda exempta de la validació de restriccions)."""
+        return self.fixar_horari and (dia, hora) in self.slots_fixats_per_prof.get(professor, set())
 
     def _assumpcio(self, clau: str, etiqueta: str):
         """Literal d'assumpció per a un grup de restriccions (None si desactivat).
@@ -841,8 +870,11 @@ class HorariSolver:
                     f"desiderata_p{professor_idx}",
                     f"Desiderates (hores no disponibles) de {professor.get('nom', professor_idx)}")
 
-            # No disponible
+            # No disponible (les hores manuals fixades en queden exemptes:
+            # una hora posada a mà pot caure en una franja no disponible)
             for dia, hora in restriccions.get('no_disponible', []):
+                if self._es_fixat(professor_idx, dia, hora):
+                    continue
                 for (m, p, d, h, a, s) in self.vars_assignacio:
                     if p == professor_idx and d == dia and h == hora:
                         c = self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 0)
@@ -862,43 +894,61 @@ class HorariSolver:
                         if p == p_idx and d == dia and h == hora:
                             hores_diaries.append(self.vars_assignacio[(m, p, d, h, a, s)])
                 
-                # Limitar a 6 hores màxim per dia
+                # Límit d'hores per dia (6, o 7 amb '7hores'). Amb fixar_horari,
+                # les hores manuals no es validen: el límit no baixa mai per sota
+                # del nombre d'hores ja fixades aquell dia (max(base, fixades)).
                 nom_prof = self.professor_per_index[p_idx].get('nom', p_idx)
-                if hores_diaries and not self.professor_per_index[p_idx].get('7hores', False):
-                    c = self.model.Add(sum(hores_diaries) <= 6)
-                    lit = self._assumpcio(f"maxhores_p{p_idx}",
-                                          f"Màxim 6 hores diàries de {nom_prof} (es pot ampliar amb '7hores')")
-                    if lit is not None:
-                        c.OnlyEnforceIf(lit)
-                elif hores_diaries and self.professor_per_index[p_idx].get('7hores', False):
-                    c = self.model.Add(sum(hores_diaries) <= 7)
-                    lit = self._assumpcio(f"maxhores_p{p_idx}",
-                                          f"Màxim 7 hores diàries de {nom_prof}")
+                if hores_diaries:
+                    base = 7 if self.professor_per_index[p_idx].get('7hores', False) else 6
+                    n_fix = sum(1 for h in range(self.hores_per_dia)
+                                if self._es_fixat(p_idx, dia, h))
+                    c = self.model.Add(sum(hores_diaries) <= max(base, n_fix))
+                    lit = self._assumpcio(
+                        f"maxhores_p{p_idx}",
+                        f"Màxim {base} hores diàries de {nom_prof}"
+                        + ("" if base != 6 else " (es pot ampliar amb '7hores')"))
                     if lit is not None:
                         c.OnlyEnforceIf(lit)
 
-        # 10. Restricció: Un professor no pot fer classe a primera hora si el dia anterior va tenir classe a última hora
+        # 10. Restricció: descans mínim de 12 h entre l'última classe d'un dia i
+        # la primera de l'endemà. Es prohibeix qualsevol parella de classes en
+        # dies consecutius amb menys de 12 h de separació (durada de classe: 60
+        # min). Les parelles on totes dues hores són manuals (fixades) queden
+        # exemptes: les hores fixades no es validen entre elles.
+        DURADA_CLASSE_MIN = 60
+        DESCANS_MINIM_MIN = 12 * 60
         for p_idx in self.professor_per_index:
+            nom_prof = self.professor_per_index[p_idx].get('nom', p_idx)
             lit_descans = self._assumpcio(
                 f"descans_p{p_idx}",
-                f"Descans de {self.professor_per_index[p_idx].get('nom', p_idx)}: "
-                f"no pot fer primera hora després d'una última hora")
-            for dia in range(1, self.dies):  # Comencem des del segon dia (dia 1)
-                # Si el professor està ocupat l'última hora del dia anterior, no pot estar-ho a primera hora d'avui
-                c = self.model.Add(
-                    self.slots_ocupats_professor[(p_idx, dia, 0)] <=
-                    1 - self.slots_ocupats_professor[(p_idx, dia-1, self.hores_per_dia-1)]
-                )
-                if lit_descans is not None:
-                    c.OnlyEnforceIf(lit_descans)
+                f"Descans de 12 h de {nom_prof} entre l'última classe d'un dia "
+                f"i la primera de l'endemà")
+            for dia in range(1, self.dies):
+                for h_prev in range(self.hores_per_dia):
+                    fi_prev = self.hores_inici_min[h_prev] + DURADA_CLASSE_MIN
+                    for h_next in range(self.hores_per_dia):
+                        descans = (1440 - fi_prev) + self.hores_inici_min[h_next]
+                        if descans >= DESCANS_MINIM_MIN:
+                            continue
+                        if (self._es_fixat(p_idx, dia - 1, h_prev) and
+                                self._es_fixat(p_idx, dia, h_next)):
+                            continue
+                        c = self.model.Add(
+                            self.slots_ocupats_professor[(p_idx, dia - 1, h_prev)] +
+                            self.slots_ocupats_professor[(p_idx, dia, h_next)] <= 1)
+                        if lit_descans is not None:
+                            c.OnlyEnforceIf(lit_descans)
         
         
 
         
         # 12. Restricció: Un professor no pot tenir lliure ni dilluns ni divendres
         for p_idx in self.professor_per_index:
-            if not self.professor_per_index[p_idx].get('controlable', False):
-                continue  
+            prof = self.professor_per_index[p_idx]
+            # Els professors "lliures de restriccions" no tenen l'exigència de
+            # classe dilluns/divendres i poden tenir diversos dies lliures.
+            if not prof.get('controlable', False) or prof.get('lliureRestriccions', False):
+                continue
 
             te_classe_dia = []
             for dia in range(self.dies):
@@ -1233,8 +1283,11 @@ class HorariSolver:
             
             # Procesar preferencias (horas que prefiere no tener clase)
             for dia, hora in restriccions.get('prefereix_no', []):
+                # Les hores manuals fixades no es penalitzen (no es validen)
+                if self._es_fixat(p_idx, dia, hora):
+                    continue
                 print(f"    {nom_professor} prefiere no tener clase el día {dia}, hora {hora}")
-                
+
                 # Variable que indica si se respeta esta preferencia
                 no_respetada = self.model.NewBoolVar(f"pref_no_respetada_p{p_idx}_d{dia}_h{hora}")
                 
@@ -1516,6 +1569,8 @@ class HorariSolver:
         """
         self.explicar_infeasible = explicar_infeasible
         self.ignora_hores_grogues = ignora_hores_grogues
+        # Les hores manuals només queden exemptes si realment es fixen.
+        self.fixar_horari = bool(fixar_horari and self.horari_fixat)
         self.crear_variables()
         self.afegir_restriccions()
         if fixar_horari and self.horari_fixat:

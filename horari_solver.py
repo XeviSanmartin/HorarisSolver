@@ -14,9 +14,10 @@ class Professor:
     tutor_curs: int
     desiderata: List[Dict]
     moduls: List[Dict]
-    hores7: bool 
-    DiesLliures: bool 
+    hores7: bool
+    DiesLliures: bool
     controlable: bool
+    lliureRestriccions: bool = False
 
 
 
@@ -111,7 +112,19 @@ class HorariData:
 
         # Hores disponibles (dilluns=0 a divendres=4, de 8h a 21h = hores 0 a 12)
         self.dies = 5  # dilluns a divendres
-        self.hores_per_dia = 11  # de 8:00 a 21:00 (11 hores)
+        self.hores_per_dia = 11  # de 8:00 a 21:00 (11 hores) — s'ajusta amb config.horesSetmana
+        # Minut d'inici de cada franja (des de mitjanit), per calcular el descans
+        # entre dies. None = el solver farà servir uns valors per defecte.
+        self.hores_inici_min = None
+
+    @staticmethod
+    def _minuts(hhmm):
+        """'HH:MM' -> minuts des de mitjanit (0 si no es pot interpretar)."""
+        try:
+            h, m = str(hhmm).split(':')
+            return int(h) * 60 + int(m)
+        except Exception:
+            return 0
 
     def carrega_json(self, json_path: str, periode: int = 0):
         """Carrega les dades del fitxer JSON"""
@@ -126,6 +139,16 @@ class HorariData:
             periode: període del camp "horari" del qual s'extreuen les hores
                 pre-assignades (l'editor exporta 5 períodes; per defecte el 0).
         """
+        # Hores de la setmana des de la config de l'editor: fixen quantes franges
+        # té el dia i a quina hora comença cada una (per al descans entre dies).
+        config_editor = data.get('config') or {}
+        hs = config_editor.get('horesSetmana')
+        if hs:
+            parts = [t.strip() for t in str(hs).split(',') if t.strip()]
+            if parts:
+                self.hores_per_dia = len(parts)
+                self.hores_inici_min = [self._minuts(t) for t in parts]
+
         # Carrega professors
         for prof_data in data.get('professors', []):
             if prof_data.get('actiu', True):
@@ -141,7 +164,8 @@ class HorariData:
                     moduls=prof_data.get('moduls', []),
                     hores7=prof_data.get('7hores', False),
                     DiesLliures=prof_data.get('DiesLliures', False),
-                    controlable=prof_data.get('controlable', False)
+                    controlable=prof_data.get('controlable', False),
+                    lliureRestriccions=prof_data.get('lliureRestriccions', False)
                 )
                 self.professors.append(professor)
                 self.professor_per_index[professor.index] = professor
@@ -548,7 +572,8 @@ class HorariData:
                     'DiesLliures': prof.DiesLliures,
                     'moduls': self.moduls_per_professor[prof.index],
                     'restriccions': self.get_restriccions_professor(prof.index),
-                    'controlable': prof.controlable
+                    'controlable': prof.controlable,
+                    'lliureRestriccions': prof.lliureRestriccions
                 }
                 for prof in self.professors
             ],
@@ -605,6 +630,7 @@ class HorariData:
             'configuracio': {
                 'dies_setmana': self.dies,
                 'hores_per_dia': self.hores_per_dia,
+                'hores_inici_min': self.hores_inici_min,
                 'moduls_especials': {
                     'fol': list(self.moduls_fol),
                     'angles': list(self.moduls_angles),
