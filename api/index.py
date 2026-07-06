@@ -42,7 +42,7 @@ MAX_TEMPS_SOLVER = float(os.environ.get('MAX_TEMPS_SOLVER', 280))
 # Per defecte s'accepta qualsevol origen: l'API no té estat ni credencials.
 CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',') if o.strip()]
 
-VERSIO_API = '1.7.0'
+VERSIO_API = '1.7.1'
 
 DESCRIPCIO = """
 Servei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).

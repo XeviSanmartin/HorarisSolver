@@ -92,10 +92,14 @@ class HorariSolver:
         # només s'apliquen a les hores que decideix el solver.
         self.fixar_horari = False
         self.slots_fixats_per_prof = {}
+        self.slots_fixats_per_modul = {}
         for _fix in self.horari_fixat:
-            _p, _d, _h = _fix.get('professor'), _fix.get('dia'), _fix.get('hora')
+            _p, _d, _h, _m = (_fix.get('professor'), _fix.get('dia'),
+                              _fix.get('hora'), _fix.get('modul'))
             if _p is not None and _d is not None and _h is not None:
                 self.slots_fixats_per_prof.setdefault(_p, set()).add((_d, _h))
+            if _m is not None and _d is not None and _h is not None:
+                self.slots_fixats_per_modul.setdefault(_m, set()).add((_d, _h))
 
         # Índex per a accés ràpid
         self.modul_per_index = {m['index']: m for m in self.moduls if 'index' in m}
@@ -158,6 +162,14 @@ class HorariSolver:
         """Cert si (dia,hora) és una hora fixada manualment del professor amb
         fixar_horari actiu (llavors queda exempta de la validació de restriccions)."""
         return self.fixar_horari and (dia, hora) in self.slots_fixats_per_prof.get(professor, set())
+
+    def _modul_dia_fixat(self, modul, dia):
+        """Cert si el mòdul té alguna hora fixada manualment aquest dia (amb
+        fixar_horari actiu): llavors no se li apliquen les regles de posició
+        (FOL/anglès sempre a primera/última, tutoria mai a primera/última)."""
+        if not self.fixar_horari:
+            return False
+        return any(d == dia for (d, _h) in self.slots_fixats_per_modul.get(modul, set()))
 
     def _assumpcio(self, clau: str, etiqueta: str):
         """Literal d'assumpció per a un grup de restriccions (None si desactivat).
@@ -708,6 +720,9 @@ class HorariSolver:
                 
                 # Per cada dia
                 for dia in range(self.dies):
+                    # Si la tutoria s'ha posat a mà aquest dia, no es valida la posició
+                    if self._modul_dia_fixat(modul_idx, dia):
+                        continue
                     # Crear variables que indiquen si el curs té alguna classe en cada hora
                     te_classe = [None] * self.hores_per_dia
                     for hora in range(self.hores_per_dia):
@@ -799,6 +814,10 @@ class HorariSolver:
                     f"{modul.get('nom', modul_idx)} ({nom_curs}) sempre a primera o última hora (FOL/anglès)")
 
                 for dia in range(self.dies):
+                    # Si el mòdul (FOL/anglès) s'ha posat a mà aquest dia, no es
+                    # valida la posició a primera/última hora.
+                    if self._modul_dia_fixat(modul_idx, dia):
+                        continue
                     # Variables per marcar si el mòdul es fa en cada hora
                     assignat_hora = [None] * self.hores_per_dia
                     for hora in range(self.hores_per_dia):
