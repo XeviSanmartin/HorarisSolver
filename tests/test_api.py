@@ -676,19 +676,27 @@ def test_curs_sense_forats(solucio_real):
                 )
 
 
-def test_maxim_dues_classes_per_slot_de_curs(solucio_real):
-    """Un slot d'un curs té com a màxim 2 classes (desdoblament subgrups 1 i 2)."""
+def test_maxim_una_classe_per_slot_de_curs(solucio_real):
+    """Per als ALUMNES d'un curs, un slot té una sola "classe": com a molt un
+    mòdul de grup sencer, o bé un desdoblament (subgrup 1 + subgrup 2). Diversos
+    professors del MATEIX mòdul i subgrup (co-docència: titular + suport) són una
+    sola classe i estan permesos: es compten mòduls distints, no professors."""
     for c_idx, curs in enumerate(solucio_real['solucio']['horari']):
         for d, dia in enumerate(curs):
             for h, classes in enumerate(dia):
-                assert len(classes) <= 2, (
-                    f'Curs {c_idx} dia {d} hora {h}: {len(classes)} classes'
-                )
-                if len(classes) == 2:
-                    subgrups = sorted(c['subgrup'] for c in classes)
-                    assert subgrups == [1, 2], (
-                        f'Curs {c_idx} dia {d} hora {h}: desdoblament amb subgrups {subgrups}'
-                    )
+                if not classes:
+                    continue
+                moduls_per_sg = {1: set(), 2: set(), 3: set()}
+                for c in classes:
+                    moduls_per_sg[c['subgrup']].add(c['modul_index'])
+                lloc = f'Curs {c_idx} dia {d} hora {h}'
+                if moduls_per_sg[3]:
+                    assert len(moduls_per_sg[3]) == 1, f'{lloc}: dos mòduls de grup sencer alhora'
+                    assert not moduls_per_sg[1] and not moduls_per_sg[2], (
+                        f'{lloc}: grup sencer i subgrup alhora')
+                else:
+                    assert len(moduls_per_sg[1]) <= 1, f'{lloc}: dos mòduls al subgrup 1'
+                    assert len(moduls_per_sg[2]) <= 1, f'{lloc}: dos mòduls al subgrup 2'
 
 
 def test_aula_sense_solapaments(solucio_real, dades_reals):
@@ -702,9 +710,13 @@ def test_aula_sense_solapaments(solucio_real, dades_reals):
     for a_pos, aula in enumerate(solucio_real['solucio']['aules']):
         for d, dia in enumerate(aula):
             for h, classes in enumerate(dia):
-                if len(classes) > 1:
-                    assert all(c['modul_index'] in simultanis for c in classes), (
-                        f'Aula pos {a_pos} dia {d} hora {h}: solapament no simultani: {classes}'
+                moduls = {c['modul_index'] for c in classes}
+                # Diversos professors del MATEIX mòdul (co-docència: titular +
+                # suport, reunions) comparteixen aula: és una sola classe. Només
+                # es prohibeix barrejar mòduls DIFERENTS no simultanis.
+                if len(moduls) > 1:
+                    assert all(m in simultanis for m in moduls), (
+                        f'Aula pos {a_pos} dia {d} hora {h}: solapament no simultani: {moduls}'
                     )
 
 

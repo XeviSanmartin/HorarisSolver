@@ -17,7 +17,7 @@ restriccions i decisions/paranys coneguts.
   cursos, mòduls, aules, especialitats, `projectes`, `horaris_projectes`.
 - `exportar_html.py`, `switch2.py` — utilitats/exportació.
 - Docs: **`DOC_API_SOLVER.md`**, `API_REST.md`, `openapi.json`, `DESPLEGAMENT.md`,
-  `HORES_FIXADES.md`. Versió API actual: **1.7.1**.
+  `HORES_FIXADES.md`. Versió API actual: **1.8.0**.
   - `openapi.json` i `dades_solver_processades.json` són fitxers "daurats" verificats
     per tests: regenera'ls amb `scripts/exporta_openapi.py` i carregant
     `BuitRestriccions.json` a `HorariData().exporta_dades_processades(...)` quan canviïn
@@ -76,6 +76,22 @@ franges (compatibilitat amb dades antigues).
 
 - **Regles de posició** (per mòdul/curs): FOL/anglès sempre a **primera o última** hora
   del curs (restr. 6) i tutoria **mai** a primera/última (restr. 5).
+
+- **Co-docència i ocupació (restr. 3 i 4).** Per als ALUMNES, un curs té una sola classe
+  per slot: com a molt un mòdul de grup sencer, o un desdoblament (subgrup 1 + subgrup 2).
+  Diversos professors del **MATEIX mòdul i subgrup** són UNA sola classe (titular + suport,
+  reunions) i estan permesos: **NO es limita el nombre de professors** per (mòdul, subgrup)
+  — es compten mòduls distints, no assignacions. Igual a l'aula (restr. 3): diversos
+  professors del mateix mòdul comparteixen aula; només es prohibeix barrejar mòduls
+  DIFERENTS no simultanis. (Abans un `sum(subgrup) <= 1` bloquejava la co-docència i feia
+  INFEASIBLE les reunions.)
+
+- **Suport = acompanya el titular** (bloc a `afegir_restriccions`, prop dels projectes).
+  Un professor de suport (`moduls[].suport=true`) només imparteix el mòdul a les hores en
+  què un **titular** del mateix mòdul també el fa (`self.assig_es_suport` + literal
+  d'assumpció `suport_p{p}`). Cas d'ús: una **reunió** es modela amb un titular i la resta
+  de professors com a suport → tots segueixen el titular a la mateixa hora. També s'aplica
+  als **mòduls simultanis** (`moduls_simultanis`), que ja tenien la seva pròpia coincidència.
 
 - **Hores fixades exemptes** (`fixar_horari` + `horari_fixat`). Les hores posades a mà
   compten com a **context** però **no es validen** contra cap regla de política (ni
