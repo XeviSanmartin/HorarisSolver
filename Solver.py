@@ -571,6 +571,22 @@ class HorariSolver:
                             self.model.AddImplication(algun_grup_sencer, sg2.Not())
 
 
+        # 4b. Co-docència explícita: dos professors DIFERENTS del mateix mòdul i
+        # subgrup NO poden compartir el mateix slot, tret que l'acompanyant
+        # estigui marcat com a SUPORT (titular + suport; p. ex. reunions o
+        # projectes realment co-docents). Sense suport, cadascú fa les seves
+        # hores per separat. Els subgrups diferents (desdoblaments A/B) sí que
+        # van en paral·lel; els suport ja queden lligats al titular per la
+        # restricció de suport. Es limita a un sol professor NO-suport per
+        # (mòdul, subgrup, dia, hora).
+        vars_no_suport_per_slot = {}
+        for (m, p, d, h, a, s), var in self.vars_assignacio.items():
+            if not self.assig_es_suport.get((m, p, a, s), False):
+                vars_no_suport_per_slot.setdefault((m, s, d, h), []).append(var)
+        for vars_slot in vars_no_suport_per_slot.values():
+            if len(vars_slot) > 1:
+                self.model.Add(sum(vars_slot) <= 1)
+
         # 4.1 Hores consecutives per curs
         for c_idx in self.curs_per_index:
             for dia in range(self.dies):

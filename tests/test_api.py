@@ -886,3 +886,63 @@ def test_particio_disjuncio_en_tria_una():
     """Amb diverses particions permeses, el solver en realitza EXACTAMENT una."""
     cos = _solve_particio([[3], [1, 1, 1]], hores=3)
     assert _estructura_blocs(cos) in ([3], [1, 1, 1])
+
+
+# ---------------------------------------------------------------------------
+# /api/solve — co-docència (diversos professors, mateix mòdul)
+# ---------------------------------------------------------------------------
+
+def _dades_codocencia(suport_segon):
+    """Dos professors fan el MATEIX mòdul (1h cadascun, grup sencer). Si
+    `suport_segon` és cert, el segon està marcat com a suport (co-docència)."""
+    def profe(idx, nom, suport):
+        return {
+            'index': idx, 'actiu': True, 'nom': nom, 'nomCurt': nom,
+            'especialitat': 0, 'controlable': False, 'lliureRestriccions': True,
+            'desiderata': [],
+            'moduls': [{'index': 0, 'hores': 1, 'aula': 0, 'subgrup': 3, 'suport': suport}],
+        }
+    return {
+        'professors': [profe(0, 'T1', False), profe(1, 'T2', suport_segon)],
+        'moduls': [{'index': 0, 'codi': 'T', 'nom': 'Test', 'curs': 0, 'especialitat': 0}],
+        'cursos': [{'index': 0, 'actiu': True, 'nom': 'TestCurs', 'aula': 0}],
+        'aules': [{'index': 0, 'actiu': True, 'nom': 'Aula Test'}],
+        'especialitats': [{'index': 0, 'actiu': True, 'codi': 'T', 'nom': 'Test'}],
+        'config': {'horesSetmana': '8,9,10,11,12,13'},
+    }
+
+
+def _slots_modul0(cos):
+    """{professor_index: set((dia,hora))} de les hores del mòdul 0."""
+    res = {}
+    for d, dia in enumerate(cos['solucio']['horari'][0]):
+        for h, classes in enumerate(dia):
+            for c in classes:
+                if c['modul_index'] == 0:
+                    res.setdefault(c['professor_index'], set()).add((d, h))
+    return res
+
+
+def _solve_codocencia(suport_segon):
+    r = client.post('/api/solve', json={
+        'dades': _dades_codocencia(suport_segon),
+        'opcions': {'max_time_seconds': 30, 'num_workers': 4},
+    })
+    assert r.status_code == 200, r.text
+    cos = r.json()
+    assert cos['estat'] in ('OPTIMAL', 'FEASIBLE'), cos.get('estat')
+    return cos
+
+
+def test_codocencia_sense_suport_separa_professors():
+    """Dos professors del mateix mòdul/subgrup sense suport NO comparteixen slot."""
+    slots = _slots_modul0(_solve_codocencia(False))
+    assert slots.get(0) and slots.get(1)
+    assert slots[0].isdisjoint(slots[1]), f'comparteixen slot: {slots[0] & slots[1]}'
+
+
+def test_codocencia_amb_suport_comparteix_slot():
+    """Amb el segon marcat suport, acompanya el titular al mateix slot."""
+    slots = _slots_modul0(_solve_codocencia(True))
+    assert slots.get(0) and slots.get(1)
+    assert slots[0] == slots[1], f'el suport no acompanya el titular: {slots}'
