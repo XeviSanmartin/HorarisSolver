@@ -807,3 +807,82 @@ def test_solucio_compatible_preserva_flags(solucio_real, dades_reals):
     # (abans del fix el flag es forçava a False i això no passava mai)
     if esperats_simultani:
         assert n_simultani > 0, 'cap cel·la simultània marcada a la solució compatible'
+
+
+# ---------------------------------------------------------------------------
+# /api/solve — particions (repartiment d'hores en blocs)
+# ---------------------------------------------------------------------------
+
+def _dades_particio(hores, particio):
+    """Dataset mínim: 1 professor amb 1 mòdul de `hores` hores i la `particio`
+    donada. 6 hores/dia, professor lliure de restriccions de règim."""
+    return {
+        'professors': [{
+            'index': 0, 'actiu': True, 'nom': 'Test Profe', 'nomCurt': 'Test',
+            'especialitat': 0, 'controlable': False, 'lliureRestriccions': True,
+            'desiderata': [],
+            'moduls': [{'index': 0, 'hores': hores, 'aula': 0, 'subgrup': 3,
+                        'particio': particio}],
+        }],
+        'moduls': [{'index': 0, 'codi': 'T', 'nom': 'Test', 'curs': 0, 'especialitat': 0}],
+        'cursos': [{'index': 0, 'actiu': True, 'nom': 'TestCurs', 'aula': 0}],
+        'aules': [{'index': 0, 'actiu': True, 'nom': 'Aula Test'}],
+        'especialitats': [{'index': 0, 'actiu': True, 'codi': 'T', 'nom': 'Test'}],
+        'config': {'horesSetmana': '8,9,10,11,12,13'},
+    }
+
+
+def _estructura_blocs(cos):
+    """Longituds dels blocs (hores consecutives el mateix dia) del mòdul 0 /
+    professor 0, ordenades de gran a petit."""
+    horari = cos['solucio']['horari'][0]
+    per_dia = {}
+    for d, dia in enumerate(horari):
+        for h, classes in enumerate(dia):
+            for c in classes:
+                if c['modul_index'] == 0 and c['professor_index'] == 0:
+                    per_dia.setdefault(d, []).append(h)
+    blocs = []
+    for hores in per_dia.values():
+        hores.sort()
+        inici = 0
+        for i in range(1, len(hores) + 1):
+            if i == len(hores) or hores[i] != hores[i - 1] + 1:
+                blocs.append(i - inici)
+                inici = i
+    return sorted(blocs, reverse=True)
+
+
+def _solve_particio(particio, hores=3):
+    r = client.post('/api/solve', json={
+        'dades': _dades_particio(hores, particio),
+        'opcions': {'max_time_seconds': 30, 'num_workers': 4},
+    })
+    assert r.status_code == 200, r.text
+    cos = r.json()
+    assert cos['estat'] in ('OPTIMAL', 'FEASIBLE'), cos.get('estat')
+    return cos
+
+
+def test_particio_buida_reparteix_lliure():
+    """Sense partició, el solver reparteix lliurement però col·loca totes les hores."""
+    cos = _solve_particio([], hores=3)
+    assert sum(_estructura_blocs(cos)) == 3
+
+
+def test_particio_unica_tot_seguit():
+    """[[3]] força 3 hores consecutives el mateix dia."""
+    cos = _solve_particio([[3]], hores=3)
+    assert _estructura_blocs(cos) == [3]
+
+
+def test_particio_unica_separada():
+    """[[1,1,1]] força 3 hores en 3 dies diferents."""
+    cos = _solve_particio([[1, 1, 1]], hores=3)
+    assert _estructura_blocs(cos) == [1, 1, 1]
+
+
+def test_particio_disjuncio_en_tria_una():
+    """Amb diverses particions permeses, el solver en realitza EXACTAMENT una."""
+    cos = _solve_particio([[3], [1, 1, 1]], hores=3)
+    assert _estructura_blocs(cos) in ([3], [1, 1, 1])

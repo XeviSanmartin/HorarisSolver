@@ -1233,12 +1233,18 @@ class HorariSolver:
             s_idx = assignacio['subgrup']
             particio = assignacio.get('particio', [])
 
-            if not particio or not particio[0]:
+            # `particio` és una llista de particions PERMESES (cada partició és
+            # una llista de longituds de blocs, hores consecutives el mateix dia,
+            # un bloc per dia). Buit => cap restricció (repartiment lliure). Amb
+            # diverses particions, el solver en TRIA una (disjunció); amb una de
+            # sola, es força (equivalent al comportament clàssic).
+            particions = [p for p in particio if p] if particio else []
+            if not particions:
                 continue
 
             profesor_nom = self.professor_per_index.get(p_idx, {}).get('nom', f"Profesor {p_idx}")
             modul_nom = self.modul_per_index.get(m_idx, {}).get('nom', f"Módulo {m_idx}")
-            print(f"  Aplicando partición {particio} para {profesor_nom} en {modul_nom}")
+            print(f"  Aplicando partición(es) {particions} para {profesor_nom} en {modul_nom}")
 
             # -------- Preparar matriz de variables por día y hora --------
             vars_dia_horas = [
@@ -1254,35 +1260,41 @@ class HorariSolver:
                 for d in range(self.dies)
             ]
 
-            # -------- Variables de bloques por índice, día y hora --------
-            y = {}
-            for j, longitud in enumerate(particio[0]):
+            # -------- Selector de partició (disjunció): exactament una activa --
+            use = [self.model.NewBoolVar(f"usepart{i}_{m_idx}_{p_idx}_{s_idx}")
+                   for i in range(len(particions))]
+            self.model.Add(sum(use) == 1)
+
+            for i, part in enumerate(particions):
+                # -------- Variables de bloques por índice, día y hora --------
+                y = {}
+                for j, longitud in enumerate(part):
+                    for d in range(self.dies):
+                        for h in range(self.hores_per_dia - longitud + 1):
+                            y[j, d, h] = self.model.NewBoolVar(f"y_p{i}_b{j}_d{d}_h{h}_{m_idx}_{p_idx}_{s_idx}")
+
+                    # Cada bloque j se coloca una vez SI la partició i és activa
+                    self.model.Add(
+                        sum(y[j, d, h] for d in range(self.dies)
+                                        for h in range(self.hores_per_dia - longitud + 1)) == use[i]
+                    )
+
+                # -------- Vincular y[j,d,h] con las asignaciones horarias ------
+                for j, longitud in enumerate(part):
+                    for d in range(self.dies):
+                        for h in range(self.hores_per_dia - longitud + 1):
+                            for k in range(longitud):
+                                self.model.Add(
+                                    vars_dia_horas[d][h + k] >= y[j, d, h]
+                                )
+
+                # -------- Evitar solapamientos: solo un bloque por día ---------
                 for d in range(self.dies):
-                    for h in range(self.hores_per_dia - longitud + 1):
-                        y[j, d, h] = self.model.NewBoolVar(f"y_bloque{j}_d{d}_h{h}_{m_idx}_{p_idx}_{s_idx}")
-
-                # Asegurar que cada bloque j se coloca una sola vez
-                self.model.Add(
-                    sum(y[j, d, h] for d in range(self.dies)
-                                    for h in range(self.hores_per_dia - longitud + 1)) == 1
-                )
-
-            # -------- Vincular y[j,d,h] con las asignaciones horarias --------
-            for j, longitud in enumerate(particio[0]):
-                for d in range(self.dies):
-                    for h in range(self.hores_per_dia - longitud + 1):
-                        for k in range(longitud):
-                            self.model.Add(
-                                vars_dia_horas[d][h + k] >= y[j, d, h]
-                            )
-
-            # -------- Evitar solapamientos: solo un bloque por día --------
-            for d in range(self.dies):
-                self.model.Add(
-                    sum(y[j, d, h]
-                        for j, longitud in enumerate(particio[0])
-                        for h in range(self.hores_per_dia - longitud + 1)) <= 1
-                )
+                    self.model.Add(
+                        sum(y[j, d, h]
+                            for j, longitud in enumerate(part)
+                            for h in range(self.hores_per_dia - longitud + 1)) <= 1
+                    )
 
         
         # 1. Minimizar horas muertas (huecos) de los profesores
