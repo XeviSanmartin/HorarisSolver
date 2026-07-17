@@ -281,6 +281,54 @@
           }
         }
       }
+    },
+    "/api/jobs/{feina_id}/solucio": {
+      "get": {
+        "tags": [
+          "Feines"
+        ],
+        "summary": "Millor solució trobada fins ara (descarregable)",
+        "description": "Retorna la millor solució trobada fins al moment en format compatible amb\nl'editor (mateix format que `solucio_compatible` de `/api/solve`), perquè es\npugui **desar a un fitxer** sense esperar que la feina acabi. Funciona tant\namb la feina en curs com acabada.",
+        "operationId": "solucio_feina_api_jobs__feina_id__solucio_get",
+        "parameters": [
+          {
+            "name": "feina_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Feina Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Solucio Feina Api Jobs  Feina Id  Solucio Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feina desconeguda, caducada o encara sense solució."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1003,6 +1051,49 @@
             ],
             "title": "Objectiu Actual",
             "description": "Valor de la funció objectiu de l'última solució trobada (com més baix, millor). `null` mentre no hi hagi cap solució."
+          },
+          "cota": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cota",
+            "description": "Cota inferior de l'objectiu que CP-SAT ha demostrat. Amb `objectiu_actual` permet calcular la distància a l'òptim."
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap",
+            "description": "Gap d'optimalitat relatiu (0.0 = òptim demostrat). `(objectiu_actual - cota) / |objectiu_actual|`."
+          },
+          "te_solucio": {
+            "type": "boolean",
+            "title": "Te Solucio",
+            "description": "Cert si ja hi ha una solució intermèdia descarregable (GET /api/jobs/{id}/solucio).",
+            "default": false
+          },
+          "metriques": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metriques",
+            "description": "Mètriques de qualitat de la millor solució: hores mortes per professor i per curs, i desiderata grogues incomplertes per professor."
           },
           "advertiments": {
             "items": {

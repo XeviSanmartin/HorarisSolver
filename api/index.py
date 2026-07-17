@@ -31,7 +31,7 @@ from ortools.sat.python import cp_model
 from pydantic import BaseModel, ConfigDict, Field
 
 from horari_solver import HorariData
-from Solver import HorariSolver, genera_json_solucio_compatible
+from Solver import HorariSolver, genera_json_solucio_compatible, calcula_gap
 
 # Límit dur del temps de resolució. A Vercel la funció té un maxDuration
 # (configurat a vercel.json); deixem marge per al preprocessament i la resposta.
@@ -478,6 +478,22 @@ class RespostaFeina(BaseModel):
         default=None,
         description="Valor de la funció objectiu de l'última solució trobada (com més "
                     "baix, millor). `null` mentre no hi hagi cap solució.")
+    cota: Optional[float] = Field(
+        default=None,
+        description="Cota inferior de l'objectiu que CP-SAT ha demostrat. Amb "
+                    "`objectiu_actual` permet calcular la distància a l'òptim.")
+    gap: Optional[float] = Field(
+        default=None,
+        description="Gap d'optimalitat relatiu (0.0 = òptim demostrat). "
+                    "`(objectiu_actual - cota) / |objectiu_actual|`.")
+    te_solucio: bool = Field(
+        default=False,
+        description='Cert si ja hi ha una solució intermèdia descarregable '
+                    '(GET /api/jobs/{id}/solucio).')
+    metriques: Optional[dict] = Field(
+        default=None,
+        description="Mètriques de qualitat de la millor solució: hores mortes per "
+                    "professor i per curs, i desiderata grogues incomplertes per professor.")
     advertiments: list[str] = Field(default_factory=list)
     resultat: Optional[RespostaSolve] = Field(
         default=None, description="Present quan `estat_feina` és 'acabada'.")
@@ -696,16 +712,44 @@ FEINES_TTL = 3600.0  # les feines finalitzades s'esborren al cap d'una hora
 
 
 class _CallbackProgres(cp_model.CpSolverSolutionCallback):
-    """Anota a la feina cada solució millorada i hi aplica l'aturada demanada."""
+    """A cada solució millorada anota el progrés a la feina (objectiu, cota, gap
+    i mètriques) i hi desa la millor solució intermèdia perquè es pugui
+    descarregar mentre la cerca continua. També aplica l'aturada demanada."""
 
-    def __init__(self, feina: dict):
+    def __init__(self, feina: dict, solver_horari):
         super().__init__()
         self._feina = feina
+        self._solver_horari = solver_horari
 
     def on_solution_callback(self):
-        self._feina['solucions_intermedies'] += 1
-        self._feina['objectiu_actual'] = self.ObjectiveValue()
-        if self._feina['aturada_demanada']:
+        f = self._feina
+        f['solucions_intermedies'] += 1
+        objectiu = self.ObjectiveValue()
+        cota = self.BestObjectiveBound()
+        f['objectiu_actual'] = objectiu
+        f['cota'] = cota
+        f['gap'] = calcula_gap(objectiu, cota)
+
+        # Construir la instantània completa és car; com a molt un cop per segon.
+        ara = self.WallTime()
+        if ara - f.get('_ultima_instantania', -1e9) >= 1.0:
+            f['_ultima_instantania'] = ara
+            try:
+                stats = {
+                    'temps_resolucio': ara,
+                    'conflictes': self.NumConflicts(),
+                    'branques': self.NumBranches(),
+                    'estat': 'FEASIBLE',
+                    'objectiu': objectiu, 'cota': cota, 'gap': f['gap'],
+                }
+                solucio = self._solver_horari._construeix_solucio(self.Value, stats)
+                solucio['metriques'] = self._solver_horari._metriques(solucio)
+                f['millor_solucio'] = solucio
+                f['metriques'] = solucio['metriques']
+            except Exception:
+                pass  # no bloquejar la cerca per un error construint mètriques
+
+        if f['aturada_demanada']:
             self.StopSearch()
 
 
@@ -726,6 +770,7 @@ def _executa_feina(feina: dict, dades_processades: dict, opcions: OpcionsSolve,
         with _silenci():
             solver = HorariSolver(dades_processades)
             feina['_solver'] = solver
+            feina['_template'] = template
             # Cobreix l'aturada demanada abans que el solver existís
             if feina['aturada_demanada']:
                 solver.atura()
@@ -737,7 +782,7 @@ def _executa_feina(feina: dict, dades_processades: dict, opcions: OpcionsSolve,
                 num_workers=opcions.num_workers,
                 log_search_progress=False,
                 output_path=None,
-                solution_callback=_CallbackProgres(feina),
+                solution_callback=_CallbackProgres(feina, solver),
             )
             feina['resultat'] = _construeix_resposta_solve(
                 solver, solucio, opcions, template, feina['advertiments'])
@@ -762,6 +807,10 @@ def _vista_feina(feina: dict) -> RespostaFeina:
         temps_transcorregut=round(max(0.0, fi - feina['iniciada']), 1),
         solucions_intermedies=feina['solucions_intermedies'],
         objectiu_actual=feina['objectiu_actual'],
+        cota=feina.get('cota'),
+        gap=feina.get('gap'),
+        te_solucio=feina.get('millor_solucio') is not None,
+        metriques=feina.get('metriques'),
         advertiments=feina['advertiments'],
         resultat=feina['resultat'],
         error=feina['error'],
@@ -809,10 +858,16 @@ def crea_feina(peticio: PeticioSolve) -> RespostaFeinaCreada:
         'finalitzada': None,
         'solucions_intermedies': 0,
         'objectiu_actual': None,
+        'cota': None,
+        'gap': None,
+        'metriques': None,
+        'millor_solucio': None,
         'advertiments': advertiments,
         'resultat': None,
         'error': None,
         '_solver': None,
+        '_template': None,
+        '_ultima_instantania': -1e9,
     }
     with FEINES_LOCK:
         FEINES[feina['id']] = feina
@@ -854,3 +909,30 @@ def atura_feina(feina_id: str) -> RespostaFeina:
         if feina['_solver'] is not None:
             feina['_solver'].atura()
     return _vista_feina(feina)
+
+
+@app.get('/api/jobs/{feina_id}/solucio', tags=['Feines'],
+         summary='Millor solució trobada fins ara (descarregable)',
+         responses={404: {'description': 'Feina desconeguda, caducada o encara sense solució.'}})
+def solucio_feina(feina_id: str) -> dict:
+    """Retorna la millor solució trobada fins al moment en format compatible amb
+    l'editor (mateix format que `solucio_compatible` de `/api/solve`), perquè es
+    pugui **desar a un fitxer** sense esperar que la feina acabi. Funciona tant
+    amb la feina en curs com acabada.
+    """
+    feina = _busca_feina(feina_id)
+    solucio = feina.get('millor_solucio')
+    if solucio is None:
+        raise HTTPException(
+            status_code=404,
+            detail='Encara no hi ha cap solució intermèdia per a aquesta feina.')
+    with _silenci():
+        compatible = genera_json_solucio_compatible(
+            solucio, template=feina.get('_template'), output_path=None)
+    return {
+        'estat': solucio['stats'].get('estat', 'FEASIBLE'),
+        'objectiu': solucio['stats'].get('objectiu'),
+        'gap': solucio['stats'].get('gap'),
+        'metriques': solucio.get('metriques'),
+        'solucio_compatible': compatible,
+    }

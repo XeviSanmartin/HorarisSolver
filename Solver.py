@@ -8,6 +8,18 @@ from exportar_html import exportar_horaris_html
 import itertools
 
 
+def calcula_gap(objectiu, cota):
+    """Gap d'optimalitat relatiu d'una minimització: (objectiu - cota) / |objectiu|.
+    0.0 = òptim demostrat. Retorna None si no es pot calcular."""
+    if objectiu is None or cota is None:
+        return None
+    try:
+        denom = max(1e-9, abs(objectiu))
+        return max(0.0, (objectiu - cota) / denom)
+    except (TypeError, ValueError):
+        return None
+
+
 class HorariSolver:
     def __init__(self, dades_path: str):
         # Càrrega de dades
@@ -1411,6 +1423,95 @@ class HorariSolver:
         if self.cp_solver is not None:
             self.cp_solver.stop_search()
 
+    def _construeix_solucio(self, valor, stats):
+        """Construeix el dict solucio (horari/professors/aules) a partir d'un
+        getter `valor(var) -> 0/1`. Serveix tant per a la solució final
+        (solver.Value) com per a una solució intermèdia des del callback de
+        progrés (callback.Value)."""
+        solucio = {
+            'horari': [[[[] for _ in range(self.hores_per_dia)] for _ in range(self.dies)] for _ in range(len(self.cursos))],
+            'professors': [[[[] for _ in range(self.hores_per_dia)] for _ in range(self.dies)] for _ in range(len(self.professors))],
+            'aules': [[[[] for _ in range(self.hores_per_dia)] for _ in range(self.dies)] for _ in range(len(self.aules))],
+            'stats': stats,
+        }
+        for (m, p, d, h, a, s), var in self.vars_assignacio.items():
+            if valor(var) == 1:
+                modul = self.modul_per_index.get(m, {'nom': f'Mòdul {m}'})
+                professor = self.professor_per_index.get(p, {'nom': f'Professor {p}'})
+                curs_idx = modul.get('curs', -1)
+                suport_cella, simultani_cella = self._flags_assignacio(m, p, a, s)
+
+                if 0 <= curs_idx < len(solucio['horari']):
+                    solucio['horari'][curs_idx][d][h].append({
+                        'modul': modul['nom'], 'modul_index': m,
+                        'professor': professor['nom'], 'professor_index': p,
+                        'aula': self.aula_per_index.get(a, {'nom': f'Aula {a}'})['nom'], 'aula_index': a,
+                        'subgrup': s, 'suport': suport_cella, 'simultani': simultani_cella,
+                    })
+                if 0 <= p < len(solucio['professors']):
+                    solucio['professors'][p][d][h].append({
+                        'modul': modul['nom'], 'modul_index': m,
+                        'curs': self.curs_per_index.get(curs_idx, {'nom': f'Curs {curs_idx}'})['nom'], 'curs_index': curs_idx,
+                        'aula': self.aula_per_index.get(a, {'nom': f'Aula {a}'})['nom'], 'aula_index': a,
+                        'subgrup': s,
+                    })
+                if 0 <= a < len(solucio['aules']):
+                    solucio['aules'][a][d][h].append({
+                        'modul': modul['nom'], 'modul_index': m,
+                        'professor': professor['nom'], 'professor_index': p,
+                        'curs': self.curs_per_index.get(curs_idx, {'nom': f'Curs {curs_idx}'})['nom'], 'curs_index': curs_idx,
+                        'subgrup': s,
+                    })
+        return solucio
+
+    def _metriques(self, solucio):
+        """Mètriques de qualitat agregades per entitat, derivades de la solució:
+        hores mortes (buits dins el rang ocupat del dia) per professor i per
+        curs, i desiderata grogues ('prefereix no') incomplertes per professor.
+        Serveixen per informar del progrés de manera gràfica a l'editor."""
+        def hores_mortes(vista):
+            total = 0
+            for dia in vista:
+                ocupades = [h for h, cel in enumerate(dia) if cel]
+                if len(ocupades) >= 2:
+                    total += (ocupades[-1] - ocupades[0] + 1) - len(ocupades)
+            return total
+
+        professors = []
+        for p_idx, vista in enumerate(solucio['professors']):
+            prof = self.professor_per_index.get(p_idx)
+            if not prof:
+                continue
+            if not any(any(dia) for dia in vista):
+                continue  # sense hores assignades: no l'incloem al gràfic
+            restr = prof.get('restriccions', {}) or {}
+            grogues = sum(1 for (d, h) in restr.get('prefereix_no', [])
+                          if d < len(vista) and h < len(vista[d]) and vista[d][h])
+            professors.append({
+                'index': p_idx,
+                'nom': prof.get('nomCurt') or prof.get('nom') or f'P{p_idx}',
+                'hores_mortes': hores_mortes(vista),
+                'desiderata_incomplertes': grogues,
+            })
+
+        cursos = []
+        for c_idx, vista in enumerate(solucio['horari']):
+            curs = self.curs_per_index.get(c_idx)
+            if not curs or not any(any(dia) for dia in vista):
+                continue
+            cursos.append({
+                'index': c_idx,
+                'nom': curs.get('nom') or f'C{c_idx}',
+                'hores_mortes': hores_mortes(vista),
+            })
+
+        return {
+            'professors': professors,
+            'cursos': cursos,
+            'total_hores_mortes': sum(p['hores_mortes'] for p in professors),
+            'total_desiderata_incomplertes': sum(p['desiderata_incomplertes'] for p in professors),
+        }
+
     def resoldre(self, max_time_seconds: float = 900, num_workers: int = 8,
                  log_search_progress: bool = True, output_path: str = 'solucio_horaris.json',
                  solution_callback=None):
@@ -1464,68 +1565,20 @@ class HorariSolver:
             print(f"Solució trobada en {end_time - start_time:.2f} segons")
             
             # Processar la solució
-            solucio = {
-                'horari': [[[[] for _ in range(self.hores_per_dia)] for _ in range(self.dies)] for _ in range(len(self.cursos))],
-                'professors': [[[[] for _ in range(self.hores_per_dia)] for _ in range(self.dies)] for _ in range(len(self.professors))],
-                'aules': [[[[] for _ in range(self.hores_per_dia)] for _ in range(self.dies)] for _ in range(len(self.aules))],
-                'stats': {
-                    'temps_resolucio': end_time - start_time,
-                    'conflictes': solver.NumConflicts(),
-                    'branques': solver.NumBranches(),
-                    'estat': 'OPTIMAL' if status == cp_model.OPTIMAL else 'FEASIBLE',
-                    'objectiu': solver.ObjectiveValue()
-                }
+            objectiu = solver.ObjectiveValue()
+            cota = solver.BestObjectiveBound()
+            stats = {
+                'temps_resolucio': end_time - start_time,
+                'conflictes': solver.NumConflicts(),
+                'branques': solver.NumBranches(),
+                'estat': 'OPTIMAL' if status == cp_model.OPTIMAL else 'FEASIBLE',
+                'objectiu': objectiu,
+                'cota': cota,
+                'gap': calcula_gap(objectiu, cota),
             }
-            
-            # Obtenir les assignacions
-            for (m, p, d, h, a, s), var in self.vars_assignacio.items():
-                if solver.Value(var) == 1:
-                    modul = self.modul_per_index.get(m, {'nom': f'Mòdul {m}'})
-                    professor = self.professor_per_index.get(p, {'nom': f'Professor {p}'})
-                    curs_idx = modul.get('curs', -1)
-                    
-                    # Flags de co-docència (suport) i simultani de l'assignació,
-                    # per no perdre'ls a la solució de sortida
-                    suport_cella, simultani_cella = self._flags_assignacio(m, p, a, s)
+            solucio = self._construeix_solucio(solver.Value, stats)
+            solucio['metriques'] = self._metriques(solucio)
 
-                    # Afegir a l'horari del curs
-                    if 0 <= curs_idx < len(solucio['horari']):
-                        solucio['horari'][curs_idx][d][h].append({
-                            'modul': modul['nom'],
-                            'modul_index': m,
-                            'professor': professor['nom'],
-                            'professor_index': p,
-                            'aula': self.aula_per_index.get(a, {'nom': f'Aula {a}'})['nom'],
-                            'aula_index': a,
-                            'subgrup': s,
-                            'suport': suport_cella,
-                            'simultani': simultani_cella
-                        })
-                    
-                    # Afegir a l'horari del professor
-                    if 0 <= p < len(solucio['professors']):
-                        solucio['professors'][p][d][h].append({
-                            'modul': modul['nom'],
-                            'modul_index': m,
-                            'curs': self.curs_per_index.get(curs_idx, {'nom': f'Curs {curs_idx}'})['nom'],
-                            'curs_index': curs_idx,
-                            'aula': self.aula_per_index.get(a, {'nom': f'Aula {a}'})['nom'],
-                            'aula_index': a,
-                            'subgrup': s
-                        })
-                    
-                    # Afegir a l'horari de l'aula
-                    if 0 <= a < len(solucio['aules']):
-                        solucio['aules'][a][d][h].append({
-                            'modul': modul['nom'],
-                            'modul_index': m,
-                            'professor': professor['nom'],
-                            'professor_index': p,
-                            'curs': self.curs_per_index.get(curs_idx, {'nom': f'Curs {curs_idx}'})['nom'],
-                            'curs_index': curs_idx,
-                            'subgrup': s
-                        })
-            
             # Guardar solució en JSON
             if output_path:
                 with open(output_path, 'w', encoding='utf-8') as f:

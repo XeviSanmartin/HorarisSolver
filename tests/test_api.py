@@ -946,3 +946,51 @@ def test_codocencia_amb_suport_comparteix_slot():
     slots = _slots_modul0(_solve_codocencia(True))
     assert slots.get(0) and slots.get(1)
     assert slots[0] == slots[1], f'el suport no acompanya el titular: {slots}'
+
+
+# ---------------------------------------------------------------------------
+# Progrés en temps real: gap, mètriques i solució intermèdia descarregable
+# ---------------------------------------------------------------------------
+
+def test_solucio_final_te_gap_cota_i_metriques():
+    """La solució de /api/solve porta gap/cota a stats i mètriques per entitat."""
+    cos = _solve_particio([], hores=3)
+    stats = cos['solucio']['stats']
+    assert 'gap' in stats and 'cota' in stats
+    metr = cos['solucio']['metriques']
+    assert 'professors' in metr and 'cursos' in metr
+    assert any(p['index'] == 0 for p in metr['professors'])
+    # cada professor porta hores_mortes i desiderata_incomplertes
+    p0 = next(p for p in metr['professors'] if p['index'] == 0)
+    assert 'hores_mortes' in p0 and 'desiderata_incomplertes' in p0
+
+
+def test_job_progres_i_solucio_intermedia_descarregable():
+    """La feina asíncrona exposa te_solucio/metriques i deixa descarregar la
+    millor solució intermèdia en format compatible."""
+    r = client.post('/api/jobs', json={
+        'dades': _dades_particio(3, []),
+        'opcions': {'max_time_seconds': 20, 'num_workers': 4},
+    })
+    assert r.status_code == 202, r.text
+    jid = r.json()['id']
+
+    estat = _espera_feina(jid)
+    assert estat['estat_feina'] == 'acabada'
+    assert estat['te_solucio'] is True
+    assert estat['metriques'] is not None
+    assert 'professors' in estat['metriques']
+
+    # Endpoint de solució intermèdia (funciona també amb la feina ja acabada)
+    s = client.get(f'/api/jobs/{jid}/solucio')
+    assert s.status_code == 200, s.text
+    body = s.json()
+    assert body['solucio_compatible'] is not None
+    assert 'horari' in body['solucio_compatible']
+    assert 'professors' in body['solucio_compatible']
+
+
+def test_solucio_intermedia_404_si_no_hi_ha_solucio():
+    """Demanar la solució d'una feina inexistent retorna 404."""
+    r = client.get('/api/jobs/inexistent123/solucio')
+    assert r.status_code == 404
