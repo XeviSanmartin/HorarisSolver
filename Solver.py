@@ -164,9 +164,26 @@ class HorariSolver:
         # NO de suport): p. ex. les reunions, on un professor és el titular i la
         # resta hi assisteixen com a suport.
         self.assig_es_suport = {}
+        self.assig_es_simultani = {}
         for a_ in self.assignacions:
-            self.assig_es_suport[(a_['modul'], a_['professor'], a_['aula'], a_['subgrup'])] = \
-                a_.get('suport', False)
+            clau = (a_['modul'], a_['professor'], a_['aula'], a_['subgrup'])
+            self.assig_es_suport[clau] = a_.get('suport', False)
+            self.assig_es_simultani[clau] = a_.get('simultani', False)
+
+    def _flags_assignacio(self, modul, professor, aula, subgrup):
+        """Retorna (suport, simultani) de l'assignació professor-mòdul. Aquests
+        flags viuen a l'assignació de l'editor i s'han de propagar a la solució
+        de sortida perquè l'editor no torni a marcar com a conflicte la
+        co-docència (titular+suport) ni els mòduls simultanis. Si el solver ha
+        triat una aula diferent de la preferida (aules_possibles), es fa un
+        fallback ignorant l'aula, ja que el flag no depèn de l'aula concreta."""
+        clau = (modul, professor, aula, subgrup)
+        if clau in self.assig_es_suport:
+            return self.assig_es_suport[clau], self.assig_es_simultani.get(clau, False)
+        for a_ in self.assignacions:
+            if a_['modul'] == modul and a_['professor'] == professor and a_['subgrup'] == subgrup:
+                return a_.get('suport', False), a_.get('simultani', False)
+        return False, False
 
     def _es_fixat(self, professor, dia, hora):
         """Cert si (dia,hora) és una hora fixada manualment del professor amb
@@ -1439,6 +1456,10 @@ class HorariSolver:
                     professor = self.professor_per_index.get(p, {'nom': f'Professor {p}'})
                     curs_idx = modul.get('curs', -1)
                     
+                    # Flags de co-docència (suport) i simultani de l'assignació,
+                    # per no perdre'ls a la solució de sortida
+                    suport_cella, simultani_cella = self._flags_assignacio(m, p, a, s)
+
                     # Afegir a l'horari del curs
                     if 0 <= curs_idx < len(solucio['horari']):
                         solucio['horari'][curs_idx][d][h].append({
@@ -1448,7 +1469,9 @@ class HorariSolver:
                             'professor_index': p,
                             'aula': self.aula_per_index.get(a, {'nom': f'Aula {a}'})['nom'],
                             'aula_index': a,
-                            'subgrup': s
+                            'subgrup': s,
+                            'suport': suport_cella,
+                            'simultani': simultani_cella
                         })
                     
                     # Afegir a l'horari del professor
@@ -1880,8 +1903,8 @@ def genera_json_solucio_compatible(solucio, dades_solver_path=None, template=Non
                         "curs": classe.get('curs_index', curs_idx),
                         "aula": classe['aula_index'],
                         "subgrup": classe['subgrup'],
-                        "suport": False,
-                        "simultani": False,
+                        "suport": classe.get('suport', False),
+                        "simultani": classe.get('simultani', False),
                         "profe": classe['professor_index']
                     }
                     

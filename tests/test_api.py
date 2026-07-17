@@ -769,3 +769,41 @@ def test_solucio_compatible(solucio_real, dades_reals):
     for a in assignacions:
         for camp in ('modul', 'curs', 'aula', 'subgrup', 'profe'):
             assert camp in a
+
+
+def test_solucio_compatible_preserva_flags(solucio_real, dades_reals):
+    """Regressió: la solució compatible ha de conservar els flags `suport` i
+    `simultani` de les assignacions (co-docència, mòduls simultanis, reunions),
+    en lloc de forçar-los a False. Quan es perdien, l'editor tornava a marcar
+    aquestes hores com a conflicte en recarregar la solució."""
+    compatible = solucio_real['solucio_compatible']
+
+    esperats_simultani = {
+        (m['index'], p['index'], m.get('subgrup', 3))
+        for p in dades_reals['professors']
+        for m in p.get('moduls', [])
+        if m.get('simultani')
+    }
+    esperats_suport = {
+        (m['index'], p['index'], m.get('subgrup', 3))
+        for p in dades_reals['professors']
+        for m in p.get('moduls', [])
+        if m.get('suport')
+    }
+    # El dataset ha de tenir alguna assignació amb flag per a que el test sigui útil
+    assert esperats_simultani or esperats_suport
+
+    celles = [c for dia in compatible['horari'][0] for hora in dia for c in hora if c]
+    n_simultani = 0
+    for c in celles:
+        clau = (c['modul'], c['profe'], c['subgrup'])
+        if clau in esperats_simultani:
+            assert c['simultani'] is True, f'simultani perdut a la sortida compatible: {clau}'
+            n_simultani += 1
+        if clau in esperats_suport:
+            assert c['suport'] is True, f'suport perdut a la sortida compatible: {clau}'
+
+    # Si hi ha assignacions simultànies a l'entrada, han d'aparèixer marcades
+    # (abans del fix el flag es forçava a False i això no passava mai)
+    if esperats_simultani:
+        assert n_simultani > 0, 'cap cel·la simultània marcada a la solució compatible'
