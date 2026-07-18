@@ -194,6 +194,12 @@ class ModulCataleg(BaseModel):
         description="Índexs de les aules on es pot impartir (requeriments d'espai/equipament). "
                     "Buit = qualsevol aula. Cada hora del mòdul anirà a una aula d'aquest conjunt. "
                     "Té prioritat sobre l'aula preferida de l'assignació del professor.")
+    primera_ultima_hora: Optional[bool] = Field(
+        default=None,
+        description="Si és cert, el mòdul ha d'anar a un extrem del dia del grup (un bloc "
+                    "d'hores sense cap classe del grup abans o després), perquè els alumnes "
+                    "que no el cursen puguin arribar més tard o marxar abans. Si és null, es "
+                    "dedueix automàticament (FOL i anglès s'hi apliquen per defecte).")
 
 
 class Curs(BaseModel):

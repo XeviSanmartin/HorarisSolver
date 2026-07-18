@@ -1422,7 +1422,7 @@
       "nom": "Imma Moreno",
       "nom_curt": "Imma",
       "especialitat": 1,
-      "tutor_curs": "-1",
+      "tutor_curs": -1,
       "7hores": false,
       "DiesLliures": false,
       "moduls": [
@@ -1861,6 +1861,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -1880,6 +1881,7 @@
       "es_tutoria": true,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -1897,6 +1899,7 @@
       "es_tutoria": true,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -1914,6 +1917,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -1933,6 +1937,7 @@
       "es_tutoria": true,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -1950,6 +1955,7 @@
       "es_tutoria": true,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -1967,6 +1973,7 @@
       "es_tutoria": true,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -1984,6 +1991,7 @@
       "es_tutoria": true,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2001,6 +2009,7 @@
       "es_tutoria": true,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2018,6 +2027,7 @@
       "es_tutoria": true,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2035,6 +2045,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2053,6 +2064,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2071,6 +2083,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2088,6 +2101,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2106,6 +2120,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2124,6 +2139,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2142,6 +2158,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2160,6 +2177,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2179,6 +2197,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2197,6 +2216,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2215,6 +2235,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2234,6 +2255,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2253,6 +2275,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2268,10 +2291,11 @@
       "codi": "AN-0179",
       "nom": "Anglès professional",
       "curs": 0,
-      "especialitat": "-1",
+      "especialitat": -1,
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": true,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2290,6 +2314,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": true,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2307,6 +2332,7 @@
       "es_tutoria": false,
       "es_fol": true,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2324,6 +2350,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2343,6 +2370,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2360,6 +2388,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2379,6 +2408,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2397,6 +2427,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2414,6 +2445,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2433,6 +2465,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2452,6 +2485,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2471,6 +2505,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2490,6 +2525,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2509,6 +2545,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2528,6 +2565,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2547,6 +2585,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2564,6 +2603,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2581,6 +2621,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2600,6 +2641,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2617,6 +2659,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2634,6 +2677,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2651,6 +2695,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": true,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2668,6 +2713,7 @@
       "es_tutoria": false,
       "es_fol": true,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2685,6 +2731,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2702,6 +2749,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2719,6 +2767,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2736,6 +2785,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2753,6 +2803,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2770,6 +2821,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": true,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2787,6 +2839,7 @@
       "es_tutoria": false,
       "es_fol": true,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2804,6 +2857,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2821,6 +2875,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2838,6 +2893,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2855,6 +2911,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2872,6 +2929,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2889,6 +2947,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": true,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2906,6 +2965,7 @@
       "es_tutoria": false,
       "es_fol": true,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2923,6 +2983,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2940,6 +3001,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2957,6 +3019,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2974,6 +3037,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -2991,6 +3055,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -3008,6 +3073,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [],
@@ -3023,6 +3089,7 @@
       "es_tutoria": false,
       "es_fol": true,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -3040,6 +3107,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": true,
       "professors_assignats": [
@@ -3057,6 +3125,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": true,
       "professors_assignats": [
@@ -3074,6 +3143,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": true,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -3091,6 +3161,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -3109,6 +3180,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": true,
       "professors_assignats": [
@@ -3126,6 +3198,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": true,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -3143,6 +3216,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -3161,6 +3235,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [
@@ -3178,6 +3253,7 @@
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": false,
+      "primera_ultima_hora": null,
       "es_sostenibilitat": false,
       "es_digitalizacio": false,
       "professors_assignats": [

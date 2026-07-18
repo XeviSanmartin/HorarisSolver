@@ -94,6 +94,9 @@ class HorariData:
         self.moduls_digitalizacio: Set[int] = set()
         self.moduls_suport: Set[int] = set()
         self.moduls_simultaneos: Set[int] = set()
+        # Override explícit de l'editor "primera/última hora" per mòdul
+        # (True/False); None = no definit → es dedueix de FOL/anglès
+        self.primera_ultima_per_modul: Dict[int, object] = {}
         
         # Desiderata dels professors
         self.desiderata_per_professor: Dict[int, List[Dict]] = {}
@@ -216,6 +219,7 @@ class HorariData:
                 horari_disponible=modul_data.get('horari_disponible', []) or [],
                 aules_possibles=modul_data.get('aules_possibles', []) or []
             )
+            self.primera_ultima_per_modul[modul.index] = modul_data.get('primera_ultima_hora')
             self.moduls.append(modul)
             self.modul_per_index[modul.index] = modul
             
@@ -587,6 +591,7 @@ class HorariData:
                     'es_tutoria': self.es_tutoria(modul.index),
                     'es_fol': modul.index in self.moduls_fol,
                     'es_angles': modul.index in self.moduls_angles,
+                    'primera_ultima_hora': self.primera_ultima_per_modul.get(modul.index),
                     'es_sostenibilitat': modul.index in self.moduls_sostenibilitat,
                     'es_digitalizacio': modul.index in self.moduls_digitalizacio,
                     'professors_assignats': self.professors_per_modul[modul.index],

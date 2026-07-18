@@ -949,6 +949,63 @@ def test_codocencia_amb_suport_comparteix_slot():
 
 
 # ---------------------------------------------------------------------------
+# /api/solve — primera/última hora (mòduls a l'extrem del dia del grup)
+# ---------------------------------------------------------------------------
+
+def _dades_primera_ultima(flag_modul0, modul1_slots=None):
+    """Curs 0 disponible només dia 0, hores 0-3. Mòdul 0 (2h, amb el flag donat)
+    i mòdul 1 (2h). Si `modul1_slots`, el mòdul 1 queda restringit a aquestes
+    hores."""
+    def profe(idx, modul, aula):
+        return {'index': idx, 'actiu': True, 'nom': f'P{idx}', 'nomCurt': f'P{idx}',
+                'especialitat': 0, 'controlable': False, 'lliureRestriccions': True,
+                'desiderata': [], 'moduls': [{'index': modul, 'hores': 2, 'aula': aula, 'subgrup': 3}]}
+    return {
+        'professors': [profe(0, 0, 0), profe(1, 1, 1)],
+        'moduls': [
+            {'index': 0, 'codi': 'M0', 'nom': 'M0', 'curs': 0, 'especialitat': 0,
+             'primera_ultima_hora': flag_modul0, 'horari_disponible': []},
+            {'index': 1, 'codi': 'M1', 'nom': 'M1', 'curs': 0, 'especialitat': 0,
+             'horari_disponible': modul1_slots or []},
+        ],
+        'cursos': [{'index': 0, 'actiu': True, 'nom': 'C0', 'aula': 0,
+                    'horari_disponible': [{'dia': 0, 'hora': h} for h in range(4)]}],
+        'aules': [{'index': 0, 'actiu': True, 'nom': 'A0'}, {'index': 1, 'actiu': True, 'nom': 'A1'}],
+        'especialitats': [{'index': 0, 'actiu': True, 'codi': 'T', 'nom': 'T'}],
+        'config': {'horesSetmana': '8,9,10,11,12,13'},
+    }
+
+
+def test_primera_ultima_bloc_a_extrem():
+    """Amb el flag, el bloc del mòdul va a un extrem del dia del grup (conté la
+    primera o l'última hora ocupada) i és contigu."""
+    r = client.post('/api/solve', json={
+        'dades': _dades_primera_ultima(True),
+        'opcions': {'max_time_seconds': 20, 'num_workers': 4}})
+    cos = r.json()
+    assert cos['estat'] in ('OPTIMAL', 'FEASIBLE'), cos.get('estat')
+    hores = sorted(h for dia in cos['solucio']['horari'][0]
+                   for h, classes in enumerate(dia) for c in classes if c['modul_index'] == 0)
+    assert hores, 'el mòdul 0 no s\'ha col·locat'
+    assert 0 in hores or 3 in hores, f'no és a un extrem: {hores}'
+    assert hores == list(range(hores[0], hores[0] + len(hores))), f'no és contigu: {hores}'
+
+
+def test_primera_ultima_flag_controla_la_regla():
+    """Amb el mòdul 1 fixat al mig (hores 1,2), el mòdul 0 queda partit a {0,3}:
+    amb el flag és INFEASIBLE (no és cap extrem), sense el flag es permet."""
+    m1_mig = [{'dia': 0, 'hora': 1}, {'dia': 0, 'hora': 2}]
+    amb = client.post('/api/solve', json={
+        'dades': _dades_primera_ultima(True, m1_mig),
+        'opcions': {'max_time_seconds': 20, 'num_workers': 4}}).json()
+    assert amb['estat'] == 'INFEASIBLE', amb.get('estat')
+    sense = client.post('/api/solve', json={
+        'dades': _dades_primera_ultima(False, m1_mig),
+        'opcions': {'max_time_seconds': 20, 'num_workers': 4}}).json()
+    assert sense['estat'] in ('OPTIMAL', 'FEASIBLE'), sense.get('estat')
+
+
+# ---------------------------------------------------------------------------
 # Progrés en temps real: gap, mètriques i solució intermèdia descarregable
 # ---------------------------------------------------------------------------
 

@@ -827,86 +827,90 @@ class HorariSolver:
                                 if lit_tutoria is not None:
                                     c.OnlyEnforceIf(lit_tutoria)
         
-        # 6. Restricció: FOL i Anglès han de ser a primera o última hora efectiva del curs,
-        # amb possibilitat d'hores consecutives del mateix mòdul
-        # --- Restricció 6: FOL i Anglès només a primera o última hora efectiva del curs ---
-        for modul in self.moduls:
-            if modul.get('es_fol', False) or modul.get('es_angles', False):
+        # 6. Restricció: mòduls marcats "primera/última hora" (per defecte, els
+        # detectats com a FOL i anglès) han d'anar a un EXTREM del dia real del
+        # grup: un bloc d'hores sense cap classe del grup ABANS (si va al
+        # principi) o DESPRÉS (si va al final), perquè els alumnes que no el
+        # cursen puguin arribar més tard o marxar abans. Admet blocs de qualsevol
+        # durada (1, 2, 3... hores). El flag `primera_ultima_hora` de l'editor
+        # mana; si no està definit (None), es dedueix com abans (FOL/anglès).
+        def _aplica_primera_ultima(modul):
+            flag = modul.get('primera_ultima_hora')
+            if flag is not None:
+                return bool(flag)
+            return modul.get('es_fol', False) or modul.get('es_angles', False)
+
+        moduls_pu = [m for m in self.moduls
+                     if _aplica_primera_ultima(m) and m.get('curs', -1) != -1]
+        if moduls_pu:
+            # Precomputa variables d'assignació per (mòdul, dia, hora) i per (curs, dia, hora)
+            vars_modul_slot = {}
+            vars_curs_slot = {}
+            for (m, p, d, h, a, s), var in self.vars_assignacio.items():
+                vars_modul_slot.setdefault((m, d, h), []).append(var)
+                c = self.modul_per_index.get(m, {}).get('curs', -1)
+                vars_curs_slot.setdefault((c, d, h), []).append(var)
+
+            # Ocupació del grup (curs): té ALGUNA classe a (curs, dia, hora)?
+            grup_ocupat = {}
+            for curs_idx in {m['curs'] for m in moduls_pu}:
+                for dia in range(self.dies):
+                    for hora in range(self.hores_per_dia):
+                        b = self.model.NewBoolVar(f"grup_ocupat_c{curs_idx}_d{dia}_h{hora}")
+                        vs = vars_curs_slot.get((curs_idx, dia, hora), [])
+                        if vs:
+                            self.model.Add(sum(vs) >= 1).OnlyEnforceIf(b)
+                            self.model.Add(sum(vs) == 0).OnlyEnforceIf(b.Not())
+                        else:
+                            self.model.Add(b == 0)
+                        grup_ocupat[(curs_idx, dia, hora)] = b
+
+            for modul in moduls_pu:
                 modul_idx = modul['index']
-                curs_idx = modul.get('curs', -1)
-
-                if curs_idx == -1:
-                    continue  # Saltar si no està assignat a un curs
-
+                curs_idx = modul['curs']
                 nom_curs = self.curs_per_index.get(curs_idx, {}).get('nom', curs_idx)
-                lit_folang = self._assumpcio(
-                    f"folang_m{modul_idx}",
-                    f"{modul.get('nom', modul_idx)} ({nom_curs}) sempre a primera o última hora (FOL/anglès)")
+                lit_pu = self._assumpcio(
+                    f"primera_ultima_m{modul_idx}",
+                    f"{modul.get('nom', modul_idx)} ({nom_curs}) a primera o última hora del grup")
 
                 for dia in range(self.dies):
-                    # Si el mòdul (FOL/anglès) s'ha posat a mà aquest dia, no es
-                    # valida la posició a primera/última hora.
+                    # Si el mòdul s'ha posat a mà aquest dia, no se'n valida la posició
                     if self._modul_dia_fixat(modul_idx, dia):
                         continue
-                    # Variables per marcar si el mòdul es fa en cada hora
-                    assignat_hora = [None] * self.hores_per_dia
+
+                    # fol[h] = el mòdul es fa a (dia, h)
+                    fol = []
                     for hora in range(self.hores_per_dia):
-                        assignat_hora[hora] = self.model.NewBoolVar(
-                            f"modul{modul_idx}_c{curs_idx}_d{dia}_h{hora}"
-                        )
-                        # Vincular amb les variables d’assignació reals
-                        vars_assignacio_hora = []
-                        for (m, p, d, h, a, s) in self.vars_assignacio:
-                            if m == modul_idx and d == dia and h == hora:
-                                vars_assignacio_hora.append(self.vars_assignacio[(m, p, d, h, a, s)])
-                        if vars_assignacio_hora:
-                            self.model.Add(sum(vars_assignacio_hora) == 1).OnlyEnforceIf(assignat_hora[hora])
-                            self.model.Add(sum(vars_assignacio_hora) == 0).OnlyEnforceIf(assignat_hora[hora].Not())
+                        b = self.model.NewBoolVar(f"pu_modul{modul_idx}_d{dia}_h{hora}")
+                        vs = vars_modul_slot.get((modul_idx, dia, hora), [])
+                        if vs:
+                            self.model.Add(sum(vs) >= 1).OnlyEnforceIf(b)
+                            self.model.Add(sum(vs) == 0).OnlyEnforceIf(b.Not())
                         else:
-                            self.model.Add(assignat_hora[hora] == 0)
+                            self.model.Add(b == 0)
+                        fol.append(b)
 
-                    # Cas 1: Una sola hora → només pot estar a la primera o a l’última
-                    una_hora = self.model.NewBoolVar(f"una_hora_modul{modul_idx}_d{dia}")
-                    self.model.Add(sum(assignat_hora) == 1).OnlyEnforceIf(una_hora)
-                    self.model.Add(sum(assignat_hora) != 1).OnlyEnforceIf(una_hora.Not())
+                    te_fol = self.model.NewBoolVar(f"pu_tefol_m{modul_idx}_d{dia}")
+                    self.model.Add(sum(fol) >= 1).OnlyEnforceIf(te_fol)
+                    self.model.Add(sum(fol) == 0).OnlyEnforceIf(te_fol.Not())
 
-                    # Cas 2: Dues hores consecutives → només pot ser (0,1) o (n-2,n-1)
-                    dues_hores = self.model.NewBoolVar(f"dues_hores_modul{modul_idx}_d{dia}")
-                    self.model.Add(sum(assignat_hora) == 2).OnlyEnforceIf(dues_hores)
-                    self.model.Add(sum(assignat_hora) != 2).OnlyEnforceIf(dues_hores.Not())
+                    inici = self.model.NewBoolVar(f"pu_inici_m{modul_idx}_d{dia}")  # res del grup abans
+                    final = self.model.NewBoolVar(f"pu_final_m{modul_idx}_d{dia}")  # res del grup després
+                    grup = [grup_ocupat[(curs_idx, dia, h)] for h in range(self.hores_per_dia)]
 
-                    # Restriccions per al cas 1 (una sola hora)
-                    if self.hores_per_dia >= 2:
-                        self.model.AddBoolOr([
-                            assignat_hora[0],                     # primera
-                            assignat_hora[self.hores_per_dia-1]   # última
-                        ]).OnlyEnforceIf([una_hora, lit_folang] if lit_folang is not None else una_hora)
+                    # Una classe NO del mòdul del grup (grup[g] i no fol[g]) abans
+                    # d'una hora del mòdul (fol[h], g<h) impedeix que sigui 'inici';
+                    # després (g>h) impedeix que sigui 'final'.
+                    for h in range(self.hores_per_dia):
+                        for g in range(self.hores_per_dia):
+                            if g < h:
+                                self.model.AddBoolOr([grup[g].Not(), fol[g], fol[h].Not(), inici.Not()])
+                            elif g > h:
+                                self.model.AddBoolOr([grup[g].Not(), fol[g], fol[h].Not(), final.Not()])
 
-                    # Restriccions per al cas 2 (dues hores seguides)
-                    if self.hores_per_dia >= 2:
-                        bloc_inici = self.model.NewBoolVar(f"bloc_inici_modul{modul_idx}_d{dia}")
-                        bloc_final = self.model.NewBoolVar(f"bloc_final_modul{modul_idx}_d{dia}")
-
-                        self.model.AddBoolAnd([assignat_hora[0], assignat_hora[1]]).OnlyEnforceIf(bloc_inici)
-                        self.model.AddBoolOr([assignat_hora[0].Not(), assignat_hora[1].Not()]).OnlyEnforceIf(bloc_inici.Not())
-
-                        self.model.AddBoolAnd([
-                            assignat_hora[self.hores_per_dia-2],
-                            assignat_hora[self.hores_per_dia-1]
-                        ]).OnlyEnforceIf(bloc_final)
-                        self.model.AddBoolOr([
-                            assignat_hora[self.hores_per_dia-2].Not(),
-                            assignat_hora[self.hores_per_dia-1].Not()
-                        ]).OnlyEnforceIf(bloc_final.Not())
-
-                        # Només es permet si és bloc d’inici o de final
-                        self.model.AddBoolOr([bloc_inici, bloc_final]).OnlyEnforceIf(
-                            [dues_hores, lit_folang] if lit_folang is not None else dues_hores)
-
-                    # Casos invàlids: més d’1 i menys de 2 hores → prohibit
-                    c = self.model.Add(sum(assignat_hora) <= 2)
-                    if lit_folang is not None:
-                        c.OnlyEnforceIf(lit_folang)
+                    # Si el mòdul es fa aquest dia, ha d'anar a l'inici o al final
+                    enforce = [te_fol] + ([lit_pu] if lit_pu is not None else [])
+                    self.model.AddBoolOr([inici, final]).OnlyEnforceIf(enforce)
         
         # 7. Restricció: Respectar restriccions horàries dels professors
         for professor in self.professors:
