@@ -1577,7 +1577,13 @@ class HorariSolver:
                 'gap': calcula_gap(objectiu, cota),
             }
             solucio = self._construeix_solucio(solver.Value, stats)
-            solucio['metriques'] = self._metriques(solucio)
+            # Les mètriques són informatives: si peten per un cas límit de dades,
+            # NO han de tombar una resolució vàlida.
+            try:
+                solucio['metriques'] = self._metriques(solucio)
+            except Exception as e:
+                print(f"AVÍS: no s'han pogut calcular les mètriques: {type(e).__name__}: {e}")
+                solucio['metriques'] = None
 
             # Guardar solució en JSON
             if output_path:
