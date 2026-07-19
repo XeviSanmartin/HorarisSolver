@@ -11,10 +11,10 @@ services:
       - "8000:8000"
     environment:
       # Barrera dura absoluta (segons). L'app envia el seu "Temps màxim" i el
-      # servidor aplica min(temps_app, MAX_TEMPS_SOLVER); amb un backstop de 24 h
+      # servidor aplica min(temps_app, MAX_TEMPS_SOLVER); amb un backstop de 3 dies
       # el valor de l'app sempre mana, però evita penjar la màquina si mai arriba
       # una petició amb un temps absurd.
-      MAX_TEMPS_SOLVER: "86400"
+      MAX_TEMPS_SOLVER: "259200"
       # Orígens permesos per CORS, separats per comes ("*" = qualsevol).
       # Per restringir-ho a l'editor d'horaris, poseu-hi el seu origen, p. ex.:
       #   CORS_ORIGINS: "https://elmeuprojecte.web.app,http://localhost:5173"

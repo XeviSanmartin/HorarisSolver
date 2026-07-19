@@ -17,8 +17,8 @@ COPY api/ api/
 
 # Barrera dura absoluta de temps (segons). L'app tria el temps real via
 # opcions.max_time_seconds ("Temps màxim"); el servidor aplica min(app, això).
-# Amb 24 h de backstop el valor de l'app sempre mana (només és una protecció).
-ENV MAX_TEMPS_SOLVER=86400
+# Amb 3 dies de backstop el valor de l'app sempre mana (només és una protecció).
+ENV MAX_TEMPS_SOLVER=259200
 # Orígens permesos per a peticions des del navegador (separats per comes)
 ENV CORS_ORIGINS=*
 
