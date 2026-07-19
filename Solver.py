@@ -996,6 +996,21 @@ class HorariSolver:
 
         
         # 12. Restricció: Un professor no pot tenir lliure ni dilluns ni divendres
+        #
+        # Presència diària per a la regla de dies lliures: alguns mòduls (p. ex.
+        # reunions) tenen horari setmanal però NO es fan cada setmana, de manera
+        # que no han de comptar per decidir si un professor "fa presència" un dia.
+        # Es marquen amb validaAssistencia=False al mòdul. Aquí es construeix la
+        # presència sumant NOMÉS les variables d'assignació de mòduls que compten.
+        # (No es toca slots_ocupats_professor: el professor hi segueix ocupat per a
+        # la resta de restriccions, com "no estar en dos llocs alhora".)
+        vars_presencia_per_prof_dia = {}  # (p_idx, dia) -> [vars]
+        for (m, p, d, h, a, s), var in self.vars_assignacio.items():
+            modul = self.modul_per_index.get(m)
+            if modul is not None and modul.get('validaAssistencia', True) is False:
+                continue
+            vars_presencia_per_prof_dia.setdefault((p, d), []).append(var)
+
         for p_idx in self.professor_per_index:
             prof = self.professor_per_index[p_idx]
             # Els professors "lliures de restriccions" no tenen l'exigència de
@@ -1005,16 +1020,19 @@ class HorariSolver:
 
             te_classe_dia = []
             for dia in range(self.dies):
-                # Recoger todas las clases de este profesor en este día
-                classes_dia = []
-                for hora in range(self.hores_per_dia):
-                    classes_dia.append(self.slots_ocupats_professor[(p_idx, dia, hora)])
-                
+                # Classes que compten com a presència aquest dia (exclou els mòduls
+                # amb validaAssistencia=False, p. ex. reunions).
+                classes_dia = vars_presencia_per_prof_dia.get((p_idx, dia), [])
+
                 # Variable que indica si el profesor tiene al menos una clase este día
                 var_name = f"te_classe_p{p_idx}_d{dia}"
                 te_classe = self.model.NewBoolVar(var_name)
-                self.model.Add(sum(classes_dia) >= 1).OnlyEnforceIf(te_classe)
-                self.model.Add(sum(classes_dia) == 0).OnlyEnforceIf(te_classe.Not())
+                if classes_dia:
+                    self.model.Add(sum(classes_dia) >= 1).OnlyEnforceIf(te_classe)
+                    self.model.Add(sum(classes_dia) == 0).OnlyEnforceIf(te_classe.Not())
+                else:
+                    # Cap mòdul que compti aquest dia → mai fa presència.
+                    self.model.Add(te_classe == 0)
                 te_classe_dia.append(te_classe)
             
             lit_dies = self._assumpcio(
