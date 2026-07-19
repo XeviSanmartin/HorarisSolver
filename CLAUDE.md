@@ -74,17 +74,32 @@ franges (compatibilitat amb dades antigues).
   professor d'aquest règim (per a professorat amb hores fora del departament o molt
   poques). No afecta màx hores, descans ni desiderates.
 
-- **Regles de posició** (per mòdul/curs): FOL/anglès sempre a **primera o última** hora
-  del curs (restr. 6) i tutoria **mai** a primera/última (restr. 5).
+- **Regles de posició** (per mòdul/curs):
+  - **Primera/última hora del grup (restr. 6, reescrita).** Un mòdul marcat va a un
+    **extrem del dia REAL del grup**: un bloc d'hores (de **qualsevol durada**, 1/2/3…)
+    sense cap classe **d'aquell mateix curs** abans (si va al principi) o després (si va
+    al final) — perquè els alumnes que no el cursen puguin arribar més tard o marxar
+    abans. Es codifica amb l'ocupació del curs `grup_ocupat[(curs,dia,hora)]` i dues
+    booleanes `inici`/`final` (només compta `grup[g] AND NOT fol[g]`, o sigui una ALTRA
+    assignatura del grup; altres grups no hi compten). Aplica si `modul['primera_ultima_hora']`
+    és `True`; si és `None`, es dedueix com abans (FOL/anglès pel nom/especialitat).
+    ⚠️ La versió antiga forçava posició **absoluta** (hora 0 o l'última del dia) i **màx
+    2 h**, cosa que per a 1r (matí) clavava el FOL a l'hora 0 i prohibia 3 h seguides.
+  - Tutoria **mai** a primera/última (restr. 5).
 
 - **Co-docència i ocupació (restr. 3 i 4).** Per als ALUMNES, un curs té una sola classe
   per slot: com a molt un mòdul de grup sencer, o un desdoblament (subgrup 1 + subgrup 2).
-  Diversos professors del **MATEIX mòdul i subgrup** són UNA sola classe (titular + suport,
-  reunions) i estan permesos: **NO es limita el nombre de professors** per (mòdul, subgrup)
-  — es compten mòduls distints, no assignacions. Igual a l'aula (restr. 3): diversos
-  professors del mateix mòdul comparteixen aula; només es prohibeix barrejar mòduls
-  DIFERENTS no simultanis. (Abans un `sum(subgrup) <= 1` bloquejava la co-docència i feia
-  INFEASIBLE les reunions.)
+  Diversos professors del **MATEIX mòdul i subgrup** es tracten com UNA sola classe: les
+  restr. 3 (aula) i 4 (curs) no els limiten (compten mòduls distints, no assignacions);
+  només es prohibeix barrejar mòduls DIFERENTS no simultanis.
+
+- **Co-docència explícita: cal `suport` per compartir slot (restr. 4b).** Sobre l'anterior,
+  s'afegeix que **com a molt un professor NO-suport** per `(mòdul, subgrup, dia, hora)`.
+  Així dos professors independents del mateix mòdul (p. ex. els que es reparteixen un
+  **projecte intermodular**) **es col·loquen en franges diferents** (cadascú fa les seves
+  hores); només comparteixen slot si algú està marcat com a **suport** (titular + suport,
+  reunions). Els desdoblaments (subgrups A/B) segueixen en paral·lel. Sense això, el solver
+  apilava professors del mateix mòdul al mateix slot i l'editor ho marcava com a conflicte.
 
 - **Suport = acompanya el titular** (bloc a `afegir_restriccions`, prop dels projectes).
   Un professor de suport (`moduls[].suport=true`) només imparteix el mòdul a les hores en
@@ -92,6 +107,18 @@ franges (compatibilitat amb dades antigues).
   d'assumpció `suport_p{p}`). Cas d'ús: una **reunió** es modela amb un titular i la resta
   de professors com a suport → tots segueixen el titular a la mateixa hora. També s'aplica
   als **mòduls simultanis** (`moduls_simultanis`), que ja tenien la seva pròpia coincidència.
+
+- **Els flags `suport`/`simultani` es CONSERVEN a la sortida.** L'extracció de la solució i
+  `genera_json_solucio_compatible` propaguen `suport`/`simultani` des de l'assignació
+  (`_flags_assignacio` amb fallback per aula). ⚠️ Abans es forçaven a `False`, així que en
+  carregar la solució a l'editor es perdia la co-docència i les reunions tornaven a donar
+  conflicte. Afecta TOTS els mòduls amb suport/simultani.
+
+- **`particio` = llista de particions PERMESES (disjunció).** Cada partició és una llista de
+  longituds de blocs d'hores consecutives (un bloc per dia). Amb diverses, el solver crea
+  un selector booleà per partició (exactament una activa) i **en realitza una**; amb una de
+  sola es força; buit `[]` = repartiment lliure. ⚠️ Abans només s'aplicava `particio[0]`.
+  L'editor ho desa com a **cadenes** ("2+1") i ho converteix a `[[int]]` en enviar-ho.
 
 - **Hores fixades exemptes** (`fixar_horari` + `horari_fixat`). Les hores posades a mà
   compten com a **context** però **no es validen** contra cap regla de política (ni
@@ -119,11 +146,22 @@ franges (compatibilitat amb dades antigues).
 - **Objectiu** (`Solver.py:~1236`, es minimitza):
   `10·hores_mortes + 20·preferències_no_respectades + 1·aules_no_preferides`.
 
+- **Progrés en viu de les feines async.** El callback `_CallbackProgres` desa a cada
+  solució millorada (màx 1/s) la millor **solució intermèdia** i **mètriques per entitat**
+  (`_metriques`: hores mortes per professor i per curs, desiderata grogues incomplertes
+  per professor). L'estat (`GET /api/jobs/{id}`) exposa `objectiu_actual`, `cota`
+  (`BestObjectiveBound`), `gap` (`calcula_gap`), `te_solucio` i `metriques`. Nou endpoint
+  **`GET /api/jobs/{id}/solucio`**: millor solució trobada fins ara en format compatible
+  (`.hor`), descarregable mentre la feina encara corre. ⚠️ El càlcul de mètriques va dins
+  un `try/except` a `resoldre` (i al callback): **mai** ha de tombar una resolució vàlida.
+
 ## Desenvolupament
 
 - **Tests**: `.venv/Scripts/python.exe -m pytest tests/test_api.py -q`
-  (42 tests; triga ~7–8 min perquè resol el dataset real). Sempre passar-los després
-  de tocar `Solver.py`.
+  (54 tests; triga ~7–8 min perquè resol el dataset real). Sempre passar-los després
+  de tocar `Solver.py`. Cobreixen, entre d'altres: co-docència (suport separa/ajunta),
+  particions (buit/una/disjunció), primera/última hora (bloc a l'extrem, flag), gap i
+  mètriques, i la solució intermèdia descarregable.
 - Entorn: `.venv` local. Dependències a `requirements.txt` / `requirements-dev.txt`.
 
 ## Desplegament (vegeu `DESPLEGAMENT.md`)
