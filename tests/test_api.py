@@ -425,6 +425,45 @@ def test_preprocess_restriccions_modul(dades_reals):
     assert processat['aules_possibles'] == [dades['aules'][0]['index']]
 
 
+def test_preprocess_aula_gran_migra_nomes_subgrups(dades_reals):
+    """L'antic `nomes_subgrups` es migra a `aula_gran` (aula_gran = not nomes_subgrups)
+    i el camp antic desapareix de la sortida; `aula_gran` explícit es respecta."""
+    dades = copy.deepcopy(dades_reals)
+    # Aula antiga: només subgrups (petita) → aula_gran False
+    dades['aules'][0].pop('aula_gran', None)
+    dades['aules'][0]['nomes_subgrups'] = True
+    # Aula antiga: admet grup sencer → aula_gran True
+    dades['aules'][1].pop('aula_gran', None)
+    dades['aules'][1]['nomes_subgrups'] = False
+    # Aula nova: aula_gran explícit mana (encara que hi hagués nomes_subgrups)
+    dades['aules'][2]['aula_gran'] = False
+
+    r = client.post('/api/preprocess', json={'dades': dades})
+    assert r.status_code == 200
+    aules = {a['index']: a for a in r.json()['dades_processades']['aules']}
+    petita = aules[dades['aules'][0]['index']]
+    gran = aules[dades['aules'][1]['index']]
+    explicita = aules[dades['aules'][2]['index']]
+    assert petita['aula_gran'] is False
+    assert gran['aula_gran'] is True
+    assert explicita['aula_gran'] is False
+    assert all('nomes_subgrups' not in a for a in aules.values())
+
+
+def test_preprocess_necessita_aula_gran_es_propaga(dades_reals):
+    """`necessita_aula_gran` del grup es propaga a les dades processades; per
+    defecte (camp absent) val True."""
+    dades = copy.deepcopy(dades_reals)
+    dades['cursos'][0]['necessita_aula_gran'] = False
+    dades['cursos'][1].pop('necessita_aula_gran', None)
+
+    r = client.post('/api/preprocess', json={'dades': dades})
+    assert r.status_code == 200
+    cursos = {c['index']: c for c in r.json()['dades_processades']['cursos']}
+    assert cursos[dades['cursos'][0]['index']]['necessita_aula_gran'] is False
+    assert cursos[dades['cursos'][1]['index']]['necessita_aula_gran'] is True
+
+
 def test_validate_restriccions_modul_advertiments(dades_reals):
     """Slots insuficients per a les hores i aules inexistents generen advertiments."""
     dades = copy.deepcopy(dades_reals)

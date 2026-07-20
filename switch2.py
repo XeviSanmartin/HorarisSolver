@@ -72,8 +72,8 @@ class HorariSolver:
             
             # Añadir información sobre las nuevas propiedades
             restriccions = []
-            if a.get('nomes_subgrups', False):
-                restriccions.append("només per subgrups 1 i 2")
+            if not a.get('aula_gran', not a.get('nomes_subgrups', False)):
+                restriccions.append("aula petita (grup sencer només si el grup no necessita aula gran)")
             if a.get('nomes_tardes', False):
                 restriccions.append("només disponible a partir de l'hora 6")
             
@@ -128,8 +128,10 @@ class HorariSolver:
             curs_idx = -1
             if modul_idx in self.modul_per_index:
                 curs_idx = self.modul_per_index[modul_idx].get('curs', -1)
-                
-                
+
+            curs_necessita_gran = self.curs_per_index.get(curs_idx, {}).get('necessita_aula_gran', True)
+
+
             for dia in range(self.dies):
                 for hora in range(self.hores_per_dia):
                     # Verificar si esta hora es válida para aulas con restricción de tardes
@@ -146,7 +148,8 @@ class HorariSolver:
                         aula = self.aula_per_index.get(aula_preferida, {})
                         
                         # Verificar restricciones del aula preferida
-                        if (aula.get('nomes_subgrups', False) and subgrup == 3) or \
+                        es_aula_gran = aula.get('aula_gran', not aula.get('nomes_subgrups', False))
+                        if (not es_aula_gran and subgrup == 3 and curs_necessita_gran) or \
                         (aula.get('nomes_tardes', False) and not es_hora_tarda):
                             continue  # Saltar esta combinación inválida
                         
@@ -156,7 +159,8 @@ class HorariSolver:
                         aules_possibles = []
                         for a_idx, aula in self.aula_per_index.items():
                             # Verificar restricciones del aula
-                            if (aula.get('nomes_subgrups', False) and subgrup == 3) or \
+                            es_aula_gran = aula.get('aula_gran', not aula.get('nomes_subgrups', False))
+                            if (not es_aula_gran and subgrup == 3 and curs_necessita_gran) or \
                             (aula.get('nomes_tardes', False) and not es_hora_tarda):
                                 continue  # Saltar esta aula
                             

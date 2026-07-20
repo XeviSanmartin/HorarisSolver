@@ -142,8 +142,8 @@ class HorariSolver:
             
             # Añadir información sobre las nuevas propiedades
             restriccions = []
-            if a.get('nomes_subgrups', False):
-                restriccions.append("només per subgrups 1 i 2")
+            if not a.get('aula_gran', not a.get('nomes_subgrups', False)):
+                restriccions.append("aula petita (grup sencer només si el grup no necessita aula gran)")
             if a.get('nomes_tardes', False):
                 restriccions.append("només disponible a partir de l'hora 6")
             
@@ -271,6 +271,12 @@ class HorariSolver:
             if aula_preferida != -1 and aules_modul is not None and aula_preferida not in aules_modul:
                 aula_preferida = -1
 
+            # Si el grup necessita aula gran (per defecte), les seves classes de
+            # grup sencer (subgrup 3) no poden anar a aules petites. Els grups
+            # amb pocs alumnes (necessita_aula_gran=False) hi caben a qualsevol
+            # aula, també sencers.
+            curs_necessita_gran = self.curs_per_index.get(curs_idx, {}).get('necessita_aula_gran', True)
+
             for dia in range(self.dies):
                 for hora in range(self.hores_per_dia):
                     # Verificar si esta hora es válida para aulas con restricción de tardes
@@ -309,8 +315,11 @@ class HorariSolver:
                         aula = self.aula_per_index.get(aula_idx)
                         if aula is None:
                             continue
-                        # Restriccions pròpies de l'aula per a aquest slot/subgrup
-                        if (aula.get('nomes_subgrups', False) and subgrup == 3) or \
+                        # Restriccions pròpies de l'aula per a aquest slot/subgrup.
+                        # Aula petita (no gran) + grup sencer només es prohibeix
+                        # si el grup necessita aula gran (compat: `nomes_subgrups`).
+                        es_aula_gran = aula.get('aula_gran', not aula.get('nomes_subgrups', False))
+                        if (not es_aula_gran and subgrup == 3 and curs_necessita_gran) or \
                            (aula.get('nomes_tardes', False) and not es_hora_tarda):
                             continue
                         aules_possibles.append(aula_idx)

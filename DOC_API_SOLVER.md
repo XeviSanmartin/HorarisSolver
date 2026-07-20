@@ -193,7 +193,8 @@ Catàleg de totes les assignatures. No inclou les hores ni els professors (això
   "nom":    "ASIX1",
   "color":  [250, 200, 200],
   "aula":   1,
-  "horari_disponible": []
+  "horari_disponible": [],
+  "necessita_aula_gran": true
 }
 ```
 
@@ -205,6 +206,7 @@ Catàleg de totes les assignatures. No inclou les hores ni els professors (això
 | `color` | [R, G, B] | Color per mostrar a la UI (valors 0–255) |
 | `aula` | int | Índex de l'aula principal a `aules[]` |
 | `horari_disponible` | array | Si buit, el curs pot tenir classe a qualsevol hora. Si té elements, **només** pot tenir classe als slots indicats |
+| `necessita_aula_gran` | bool | Per defecte `true`. Si `true`, les classes de **grup sencer** (`subgrup:3`) només poden anar a aules grans (`aula_gran:true`). Si `false`, el grup té pocs alumnes i hi cap a **qualsevol** aula, també sencer |
 
 #### `horari_disponible[]` (opcional)
 
@@ -240,7 +242,7 @@ Restricció de franges disponibles per al curs. Útil per a cursos de tarda o am
   "index":         0,
   "actiu":         true,
   "nom":           "Aula 3.01",
-  "nomes_subgrups": false,
+  "aula_gran":      true,
   "nomes_tardes":   false
 }
 ```
@@ -250,8 +252,8 @@ Restricció de franges disponibles per al curs. Útil per a cursos de tarda o am
 | `index` | int | Identificador únic |
 | `actiu` | bool | Si `false`, el solver l'ignora |
 | `nom` | string | Nom per mostrar |
-| `nomes_subgrups` | bool | Si `true`, l'aula **no** pot tenir classes de grup sencer (`subgrup:3`) |
-| `nomes_tardes` | bool | Si `true`, l'aula **only** disponible des de l'hora 6 (14:00) en endavant |
+| `aula_gran` | bool | Per defecte `true`: hi cap un grup sencer. Si `false`, és una aula **petita**: només hi caben desdoblaments (`subgrup:1`/`2`) o grups sencers amb `necessita_aula_gran:false`. Substitueix l'antic `nomes_subgrups` (`aula_gran = !nomes_subgrups`) |
+| `nomes_tardes` | bool | Si `true`, l'aula **només** disponible des de l'hora 6 (14:00) en endavant |
 
 **Aules actuals (8):**
 
@@ -412,8 +414,9 @@ Transforma el `Solver.json` afegint camps calculats que el solver OR-Tools neces
 - `moduls`: [idx, idx, ...] — llista d'índexs de mòduls del curs
 - `subgrups`: [1, 2, 3] — quins subgrups té aquest curs
 - `tutor_professor`: int — índex del professor tutor
+- `necessita_aula_gran`: bool — es propaga tal com entra (per defecte `true`)
 
-**aules** — igual però afegeix `nomes_subgrups` i `nomes_tardes` si no hi eren.
+**aules** — igual però afegeix `aula_gran` i `nomes_tardes` si no hi eren.
 
 **agrupacions** — parelles de mòduls fusionables (sostenibilitat/digitalització):
 
@@ -679,7 +682,7 @@ L'objecte classe inclou professor, mòdul i curs, però **no l'aula** (ja se sap
 | 13 | Mòduls coordinats (`moduls_coordinats`): han d'anar a la mateixa hora | Hard |
 | 14 | Mòduls de projecte (`projectes`): només als slots de `horaris_projectes` | Hard |
 | 15 | `horari_disponible` del curs: el curs no pot tenir classe fora d'aquells slots | Hard |
-| 16 | Aula `nomes_subgrups:true`: no pot tenir classes de grup sencer | Hard |
+| 16 | Aula `aula_gran:false` (petita): no admet grup sencer (`subgrup:3`) d'un grup amb `necessita_aula_gran:true` | Hard |
 | 17 | Aula `nomes_tardes:true`: no disponible abans de l'hora 6 (14:00) | Hard |
 | 18 | Hores pre-assignades (`horari` + `opcions.fixar_horari`): es mantenen al seu slot exacte | Hard (opcional) |
 | 19 | `horari_disponible` del mòdul: el mòdul només es pot impartir en aquells slots | Hard |

@@ -52,8 +52,17 @@ franges (compatibilitat amb dades antigues).
   la llista se salten (`slots_modul`, `Solver.py:~178`). S'interseca amb el del curs.
   Buit = qualsevol hora.
 
-- **Restriccions d'aula**: `nomes_subgrups` (no admet grup sencer, `subgrup==3`),
-  `nomes_tardes` (només `hora>=6`).
+- **Restriccions d'aula**: `aula_gran` (per defecte `True`; si és `False` és una aula
+  petita i no admet grup sencer `subgrup==3` **d'un grup que necessiti aula gran** —
+  vegeu més avall), `nomes_tardes` (només `hora>=6`). ⚠️ `aula_gran` **substitueix**
+  l'antic `nomes_subgrups` (`aula_gran = not nomes_subgrups`); el codi encara llegeix
+  `nomes_subgrups` com a fallback per a dades antigues.
+
+- **`necessita_aula_gran` (grup/curs) = per defecte `True`.** Un grup sencer (`subgrup==3`)
+  només es prohibeix a una aula petita (`aula_gran=False`) si el grup necessita aula gran.
+  Els grups amb pocs alumnes (`necessita_aula_gran=False`) hi caben a **qualsevol** aula,
+  també sencers. Filtre a la creació de variables (`Solver.py`, ~línia 320):
+  `not es_aula_gran and subgrup==3 and curs_necessita_gran`.
 
 - **`projectes` / `horaris_projectes`**: els mòduls a `moduls_projectes` es limiten a
   `slots_projectes` (`Solver.py:~1029`). ⚠️ **Parany**: si `projectes` no és buit i

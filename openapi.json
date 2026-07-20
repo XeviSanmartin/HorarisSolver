@@ -351,11 +351,11 @@
             "title": "Nom",
             "description": "Nom per mostrar."
           },
-          "nomes_subgrups": {
+          "aula_gran": {
             "type": "boolean",
-            "title": "Nomes Subgrups",
-            "description": "Si és cert, no admet classes de grup sencer (subgrup 3).",
-            "default": false
+            "title": "Aula Gran",
+            "description": "Si és cert (per defecte), hi cap un grup sencer. Si és fals, és una aula petita: només hi caben desdoblaments (subgrups 1 i 2) o grups sencers que no necessiten aula gran. Substitueix l'antic `nomes_subgrups`.",
+            "default": true
           },
           "nomes_tardes": {
             "type": "boolean",
@@ -410,6 +410,12 @@
             "type": "array",
             "title": "Horari Disponible",
             "description": "Si és buit, el curs pot tenir classe a qualsevol hora. Si té elements, NOMÉS als slots indicats."
+          },
+          "necessita_aula_gran": {
+            "type": "boolean",
+            "title": "Necessita Aula Gran",
+            "description": "Si és cert (per defecte), les classes de grup sencer només poden anar a aules grans. Si és fals, el grup té pocs alumnes i hi cap a qualsevol aula.",
+            "default": true
           }
         },
         "additionalProperties": true,

@@ -1422,7 +1422,7 @@
       "nom": "Imma Moreno",
       "nom_curt": "Imma",
       "especialitat": 1,
-      "tutor_curs": -1,
+      "tutor_curs": "-1",
       "7hores": false,
       "DiesLliures": false,
       "moduls": [
@@ -2291,7 +2291,7 @@
       "codi": "AN-0179",
       "nom": "Anglès professional",
       "curs": 0,
-      "especialitat": -1,
+      "especialitat": "-1",
       "es_tutoria": false,
       "es_fol": false,
       "es_angles": true,
@@ -3437,7 +3437,8 @@
           "hora": 5,
           "tipus": 2
         }
-      ]
+      ],
+      "necessita_aula_gran": true
     },
     {
       "index": 1,
@@ -3586,7 +3587,8 @@
           "hora": 10,
           "tipus": 2
         }
-      ]
+      ],
+      "necessita_aula_gran": true
     },
     {
       "index": 2,
@@ -3758,7 +3760,8 @@
           "hora": 5,
           "tipus": 2
         }
-      ]
+      ],
+      "necessita_aula_gran": true
     },
     {
       "index": 3,
@@ -3930,7 +3933,8 @@
           "hora": 5,
           "tipus": 2
         }
-      ]
+      ],
+      "necessita_aula_gran": true
     },
     {
       "index": 4,
@@ -4102,7 +4106,8 @@
           "hora": 5,
           "tipus": 2
         }
-      ]
+      ],
+      "necessita_aula_gran": true
     },
     {
       "index": 5,
@@ -4253,7 +4258,8 @@
           "hora": 10,
           "tipus": 2
         }
-      ]
+      ],
+      "necessita_aula_gran": true
     },
     {
       "index": 6,
@@ -4403,7 +4409,8 @@
           "hora": 10,
           "tipus": 2
         }
-      ]
+      ],
+      "necessita_aula_gran": true
     },
     {
       "index": 7,
@@ -4551,7 +4558,8 @@
           "hora": 10,
           "tipus": 2
         }
-      ]
+      ],
+      "necessita_aula_gran": true
     },
     {
       "index": 8,
@@ -4715,7 +4723,8 @@
           "hora": 5,
           "tipus": 2
         }
-      ]
+      ],
+      "necessita_aula_gran": true
     }
   ],
   "aules": [
@@ -4723,56 +4732,56 @@
       "index": 0,
       "nom": "Aula 3.01",
       "actiu": true,
-      "nomes_subgrups": true,
+      "aula_gran": false,
       "nomes_tardes": false
     },
     {
       "index": 1,
       "nom": "Aula 3.02",
       "actiu": true,
-      "nomes_subgrups": false,
+      "aula_gran": true,
       "nomes_tardes": false
     },
     {
       "index": 2,
       "nom": "Aula 3.03",
       "actiu": true,
-      "nomes_subgrups": true,
+      "aula_gran": false,
       "nomes_tardes": false
     },
     {
       "index": 5,
       "nom": "Aula 3.04",
       "actiu": true,
-      "nomes_subgrups": false,
+      "aula_gran": true,
       "nomes_tardes": false
     },
     {
       "index": 6,
       "nom": "Aula 3.05",
       "actiu": true,
-      "nomes_subgrups": true,
+      "aula_gran": false,
       "nomes_tardes": false
     },
     {
       "index": 7,
       "nom": "Aula 3.10",
       "actiu": true,
-      "nomes_subgrups": false,
+      "aula_gran": true,
       "nomes_tardes": true
     },
     {
       "index": 8,
       "nom": "Aula 3.02 (grup B)",
       "actiu": true,
-      "nomes_subgrups": false,
+      "aula_gran": true,
       "nomes_tardes": false
     },
     {
       "index": 9,
       "nom": "Aula 3.02 (grup C)",
       "actiu": true,
-      "nomes_subgrups": false,
+      "aula_gran": true,
       "nomes_tardes": false
     }
   ],

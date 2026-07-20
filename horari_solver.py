@@ -48,7 +48,11 @@ class Curs:
     nom: str
     color: List[int]
     aula: int
-    horari_disponible: List[Dict] 
+    horari_disponible: List[Dict]
+    # Si és cert (per defecte), les classes de grup sencer d'aquest grup només
+    # poden anar a aules grans. Si és fals, el grup té pocs alumnes i hi cap a
+    # qualsevol aula (també les petites), fins i tot sencer.
+    necessita_aula_gran: bool = True
 
 
 @dataclass
@@ -56,7 +60,10 @@ class Aula:
     index: int
     actiu: bool
     nom: str
-    nomes_subgrups: bool = False
+    # Aula gran (per defecte): hi cap un grup sencer. Si és falsa, és una aula
+    # petita i només hi caben grups sencers que no necessiten aula gran, o els
+    # desdoblaments (subgrups 1 i 2). Substitueix l'antic `nomes_subgrups`.
+    aula_gran: bool = True
     nomes_tardes: bool = False
 
 @dataclass
@@ -254,7 +261,8 @@ class HorariData:
                     nom=curs_data['nom'],
                     color=curs_data.get('color', []),
                     aula=curs_data.get('aula', -1),
-                    horari_disponible=curs_data.get('horari_disponible', [])
+                    horari_disponible=curs_data.get('horari_disponible', []),
+                    necessita_aula_gran=curs_data.get('necessita_aula_gran', True)
                 )
                 self.cursos.append(curs)
                 self.curs_per_index[curs.index] = curs
@@ -266,7 +274,11 @@ class HorariData:
                     index=aula_data['index'],
                     actiu=aula_data['actiu'],
                     nom=aula_data['nom'],
-                    nomes_subgrups=aula_data.get('nomes_subgrups', False),
+                    # `aula_gran` és el camp nou; per compatibilitat amb dades
+                    # antigues es dedueix de l'antic `nomes_subgrups` (una aula
+                    # "només subgrups" era, de fet, una aula petita → no gran).
+                    aula_gran=aula_data.get(
+                        'aula_gran', not aula_data.get('nomes_subgrups', False)),
                     nomes_tardes=aula_data.get('nomes_tardes', False)
                 )
                 self.aules.append(aula)
@@ -467,10 +479,12 @@ class HorariData:
                 avis(f"Horari fixat ({lloc}): l'aula {aula} no existeix o no està activa; "
                      f"es fixa l'hora sense aula concreta")
                 aula = -1
-            elif (aula_obj.nomes_subgrups and subgrup == 3) or (aula_obj.nomes_tardes and hora < 6):
+            elif ((not aula_obj.aula_gran and subgrup == 3
+                   and (curs is None or curs.necessita_aula_gran))
+                  or (aula_obj.nomes_tardes and hora < 6)):
                 if aula == aula_preferida:
                     avis(f"Horari fixat ({lloc}): l'aula preferida {aula} no és compatible "
-                         f"amb aquest slot (només subgrups o només tardes); es descarta")
+                         f"amb aquest slot (aula petita per a grup sencer o només tardes); es descarta")
                     return
                 avis(f"Horari fixat ({lloc}): l'aula {aula} no és compatible amb aquest slot; "
                      f"es fixa l'hora sense aula concreta")
@@ -608,7 +622,8 @@ class HorariData:
                     'moduls': self.moduls_per_curs[curs.index],
                     'subgrups': list(self.subgrups_per_curs[curs.index]),
                     'tutor_professor': self.tutories_per_curs.get(curs.index, -1),
-                    'horari_disponible': curs.horari_disponible if curs.horari_disponible else []
+                    'horari_disponible': curs.horari_disponible if curs.horari_disponible else [],
+                    'necessita_aula_gran': curs.necessita_aula_gran
                 }
                 for curs in self.cursos
             ],
@@ -617,7 +632,7 @@ class HorariData:
                     'index': aula.index,
                     'nom': aula.nom,
                     'actiu': aula.actiu,
-                    'nomes_subgrups': aula.nomes_subgrups,
+                    'aula_gran': aula.aula_gran,
                     'nomes_tardes': aula.nomes_tardes
                 }
                 for aula in self.aules
