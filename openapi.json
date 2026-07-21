@@ -2,12 +2,12 @@
   "openapi": "3.1.0",
   "info": {
     "title": "API Solver d'horaris Switch2",
-    "description": "\nServei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).\n\n## Flux\n\n1. **`POST /api/validate`** — valida el JSON d'entrada (ràpid, sense resoldre).\n2. **`POST /api/solve`** — preprocessa, construeix el model CP-SAT i resol (síncron).\n3. Opcionalment, **`POST /api/preprocess`** per inspeccionar el JSON intermedi (debug).\n\nEn desplegaments persistents (uvicorn local, Docker en un servidor propi) hi ha\ntambé el mode **asíncron**: `POST /api/jobs` llança la resolució en segon pla,\n`GET /api/jobs/{id}` n'informa del progrés i `DELETE /api/jobs/{id}` l'atura\nconservant la millor solució trobada fins al moment.\n\n## Format d'entrada\n\nEl camp `dades` de totes les peticions és el contingut complet d'un fitxer\n**`Solver.json`** de l'editor Switch2: professors (amb desiderata i assignacions\nde mòduls), catàleg de mòduls, cursos, aules, especialitats i restriccions\nopcionals (mòduls coordinats, projectes). Cada camp està descrit a l'apartat\n**Schemas** d'aquesta especificació.\n\nConvencions temporals: `dia` 0–4 (dilluns–divendres), `hora` 0–12 (08:00–20:00;\nel solver només programa les hores 0–10), `subgrup` 1 (1r mig grup), 2 (2n mig\ngrup) o 3 (grup sencer).\n\n## Estats del resultat de `/api/solve`\n\n| `estat` | Significat | `solucio` |\n|---|---|---|\n| `OPTIMAL` | Solució òptima demostrada | present |\n| `FEASIBLE` | Solució vàlida dins del temps límit (pot no ser òptima) | present |\n| `INFEASIBLE` | Les restriccions es contradiuen: cap horari possible | absent |\n| `UNKNOWN` | Temps esgotat sense conclusió: reintenteu amb més temps | absent |\n| `MODEL_INVALID` | Error intern construint el model | absent |\n\n`INFEASIBLE` i `UNKNOWN` **no** són errors HTTP: retornen `200`.\n\n## Funció objectiu\n\nEl solver minimitza `10 × hores_mortes + 20 × preferències_no_respectades`\n(desiderata `tipus: 1`). El valor final és a `solucio.stats.objectiu`.\n",
+    "description": "\nServei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).\n\n## Flux\n\n1. **`POST /api/validate`** — valida el JSON d'entrada (ràpid, sense resoldre).\n2. **`POST /api/solve`** — preprocessa, construeix el model CP-SAT i resol (síncron).\n3. Opcionalment, **`POST /api/preprocess`** per inspeccionar el JSON intermedi (debug).\n\nEn desplegaments persistents (uvicorn local, Docker en un servidor propi) hi ha\ntambé el mode **asíncron**: `POST /api/jobs` llança la resolució en segon pla,\n`GET /api/jobs/{id}` n'informa del progrés i `DELETE /api/jobs/{id}` l'atura\nconservant la millor solució trobada fins al moment.\n\n## Format d'entrada\n\nEl camp `dades` de totes les peticions és el contingut complet d'un fitxer\n**`Solver.json`** de l'editor Switch2: professors (amb desiderata i assignacions\nde mòduls), catàleg de mòduls, cursos, aules, especialitats i restriccions\nopcionals (mòduls coordinats, projectes). Cada camp està descrit a l'apartat\n**Schemas** d'aquesta especificació.\n\nConvencions temporals: `dia` 0–4 (dilluns–divendres), `hora` 0–12 (08:00–20:00;\nel solver només programa les hores 0–10), `subgrup` 1 (1r mig grup), 2 (2n mig\ngrup) o 3 (grup sencer).\n\n## Estats del resultat de `/api/solve`\n\n| `estat` | Significat | `solucio` |\n|---|---|---|\n| `OPTIMAL` | Solució òptima demostrada | present |\n| `FEASIBLE` | Solució vàlida dins del temps límit (pot no ser òptima) | present |\n| `INFEASIBLE` | Les restriccions es contradiuen: cap horari possible | absent |\n| `UNKNOWN` | Temps esgotat sense conclusió: reintenteu amb més temps | absent |\n| `MODEL_INVALID` | Error intern construint el model | absent |\n\n`INFEASIBLE` i `UNKNOWN` **no** són errors HTTP: retornen `200`.\n\n## Funció objectiu\n\nEl solver minimitza una combinació ponderada d'objectius. Els pesos són\n**configurables** a `dades.config.objectius` (0-100 per objectiu: 0 = ignora,\n100 = restricció dura, 1-99 = penalització tova): `horesMortes`, `horesVermelles`\n(no disponibles), `horesGrogues` (prefereix no), `aulaPreferida`,\n`desdoblamentMateixDia` i `matiOTarda`. Per defecte reprodueix el comportament\nclàssic (`10×hores_mortes + 20×grogues + 1×aula`, vermelles dures). El valor\nfinal és a `solucio.stats.objectiu`.\n",
     "contact": {
       "name": "HorarisSolver",
       "url": "https://github.com/XeviSanmartin/HorarisSolver"
     },
-    "version": "1.10.0"
+    "version": "1.11.0"
   },
   "paths": {
     "/api/health": {
@@ -1272,7 +1272,7 @@
             "type": "string",
             "title": "Versio Api",
             "examples": [
-              "1.10.0"
+              "1.11.0"
             ]
           },
           "max_temps_solver": {
@@ -1576,9 +1576,16 @@
             ]
           },
           "objectiu": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Objectiu",
-            "description": "Valor de la funció objectiu (com més baix, millor): 10×hores_mortes + 20×preferències_no_respectades.",
+            "description": "Valor de la funció objectiu configurable (com més baix, millor). És `null` quan es retorna la proposta original sense avaluar (mode millorar, si no s'ha pogut optimitzar dins del temps).",
             "examples": [
               3550.0
             ]
@@ -1590,8 +1597,7 @@
           "temps_resolucio",
           "conflictes",
           "branques",
-          "estat",
-          "objectiu"
+          "estat"
         ],
         "title": "StatsSolucio"
       },

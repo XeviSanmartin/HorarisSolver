@@ -197,6 +197,37 @@ franges (compatibilitat amb dades antigues).
   `cella.get('profe')` i es descartaven TOTES les cel·les de l'editor (warm start buit). El
   camp `profe`/`professor` explícit (format pla / `.hor`) segueix manant.
 
+## Objectius configurables (`config.objectius`, API 1.11.0)
+
+- La funció objectiu (a `afegir_restriccions`) ja no té pesos fixos: els llegeix de
+  **`dades.config.objectius`** (via `dades_processades['configuracio']['objectius']`).
+  Helper `_pes_objectiu(clau, defecte)`: **0** = ignora, **100** = restricció DURA,
+  **1-99** = penalització tova. Objectius: `horesMortes`, `horesVermelles`
+  (no disponibles), `horesGrogues` (prefereix no), `aulaPreferida`,
+  `desdoblamentMateixDia` i `matiOTarda`. Els defaults reprodueixen el clàssic
+  (`10/·/20/1`, vermelles dures a 100).
+- ⚠️ **`horesVermelles` (no disponibles) ara és configurable**: la constraint 7 és
+  dura només amb pes 100 (per defecte); amb 1-99 penalitza suau (vars a
+  `self._pen_vermelles`), amb 0 s'ignora. Es llegeix a l'inici d'`afegir_restriccions`
+  (`self._w_vermelles`).
+- **Objectius nous**: `_objectiu_desdoblament_mateix_dia` (que els subgrups A/B d'un
+  mòdul desdoblat facin la matèria els mateixos dies; XOR per (mòdul, dia)) i
+  `_objectiu_mati_o_tarda` (que un professor no vingui matí I tarda el mateix dia;
+  només compten les hores de **presència**, `validaAssistencia`; frontera
+  `hora_inici_tarda`). Amb pes 100 s'imposen com a restricció dura.
+- ⚠️ **`validaAssistencia`** ara es propaga de debò (Modul dataclass + `carrega_dades`
+  + `genera_dades_processades`); abans no arribava a les dades processades i el solver
+  sempre el llegia com a True (la regla de dies lliures no l'aplicava).
+- **Garantia "mai pitjor" robusta**: `_resol_solver` compara la millora amb l'objectiu
+  de referència (`Solver.resol_grid_fixat`); si ni la millora ni la referència acaben
+  dins del temps (dataset gran, o graella que no es pot fixar estrictament), retorna la
+  proposta original construïda directament de la graella (`Solver.solucio_des_de_graella`,
+  `objectiu=None`) — **mai UNKNOWN a partir d'una proposta vàlida**.
+  - ⚠️ `StatsSolucio.objectiu` és `Optional` (pot ser `null` en aquest cas).
+  - ⚠️ La validació determinista (`valida_graella`) **no** cobreix el descans de 12 h ni
+    la regla de professor controlable dll/div; una graella que passa el validador pot
+    ser INFEASIBLE en fixar-la estrictament (llavors la referència no s'obté).
+
 ## Desenvolupament
 
 - **Tests**: `.venv/Scripts/python.exe -m pytest tests/test_api.py -q`

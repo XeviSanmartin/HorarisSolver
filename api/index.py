@@ -43,7 +43,7 @@ MAX_TEMPS_SOLVER = float(os.environ.get('MAX_TEMPS_SOLVER', 280))
 # Per defecte s'accepta qualsevol origen: l'API no té estat ni credencials.
 CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',') if o.strip()]
 
-VERSIO_API = '1.10.0'
+VERSIO_API = '1.11.0'
 
 DESCRIPCIO = """
 Servei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).
@@ -85,8 +85,13 @@ grup) o 3 (grup sencer).
 
 ## Funció objectiu
 
-El solver minimitza `10 × hores_mortes + 20 × preferències_no_respectades`
-(desiderata `tipus: 1`). El valor final és a `solucio.stats.objectiu`.
+El solver minimitza una combinació ponderada d'objectius. Els pesos són
+**configurables** a `dades.config.objectius` (0-100 per objectiu: 0 = ignora,
+100 = restricció dura, 1-99 = penalització tova): `horesMortes`, `horesVermelles`
+(no disponibles), `horesGrogues` (prefereix no), `aulaPreferida`,
+`desdoblamentMateixDia` i `matiOTarda`. Per defecte reprodueix el comportament
+clàssic (`10×hores_mortes + 20×grogues + 1×aula`, vermelles dures). El valor
+final és a `solucio.stats.objectiu`.
 """
 
 TAGS_OPENAPI = [
@@ -441,9 +446,11 @@ class StatsSolucio(BaseModel):
     conflictes: int = Field(description='Conflictes explorats per CP-SAT (mesura de dificultat).')
     branques: int = Field(description='Branques explorades per CP-SAT.')
     estat: str = Field(examples=['FEASIBLE'])
-    objectiu: float = Field(
-        description='Valor de la funció objectiu (com més baix, millor): '
-                    '10×hores_mortes + 20×preferències_no_respectades.',
+    objectiu: Optional[float] = Field(
+        default=None,
+        description='Valor de la funció objectiu configurable (com més baix, millor). '
+                    'És `null` quan es retorna la proposta original sense avaluar (mode '
+                    'millorar, si no s\'ha pogut optimitzar dins del temps).',
         examples=[3550.0])
 
 
@@ -903,6 +910,15 @@ def _resol_solver(dades_processades: dict, opcions: OpcionsSolve, max_time: floa
                 advertiments.append(
                     "La millora no ha superat la proposta de partida dins del temps "
                     "disponible: es retorna la proposta original sense canvis.")
+        # Ni la millora ni el càlcul de referència han acabat dins del temps: com
+        # que la proposta ja ha passat la validació, es retorna tal qual (mai
+        # UNKNOWN a partir d'una proposta vàlida).
+        if solucio is None:
+            solucio = solver.solucio_des_de_graella(graella)
+            if advertiments is not None:
+                advertiments.append(
+                    "No s'ha pogut optimitzar la proposta dins del temps disponible: "
+                    "es retorna la proposta original. Proveu amb més temps o menys objectius.")
         return solver, solucio, None
 
     # Mode normal

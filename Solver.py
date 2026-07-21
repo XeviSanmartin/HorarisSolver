@@ -1,5 +1,6 @@
 import json
 import time
+from collections import defaultdict
 from typing import Dict, List, Tuple, Set
 from ortools.sat.python import cp_model
 import numpy as np
@@ -371,10 +372,95 @@ class HorariSolver:
     
         
         print(f"S'han creat {len(self.vars_assignacio)} variables d'assignació")
+    def _pes_objectiu(self, clau, defecte):
+        """Pes 0-100 d'un objectiu configurable (des de config.objectius de
+        l'editor). 0 = ignora, 100 = restricció DURA, 1-99 = penalització tova."""
+        try:
+            return max(0, min(100, int((self.config.get('objectius') or {}).get(clau, defecte))))
+        except (TypeError, ValueError):
+            return defecte
+
+    def _objectiu_desdoblament_mateix_dia(self, dur=False):
+        """Objectiu 'desdoblaments mateix dia': quan un mòdul està desdoblat
+        (té assignacions de subgrup A=1 i B=2 del mateix grup), que totes dues
+        meitats facin la matèria els MATEIXOS DIES (còmode si cau festa entre
+        setmana). Retorna les penalitzacions (una per (mòdul, dia) on A i B no
+        coincideixen). Amb `dur`, ho imposa (A i B sempre alhora de dia)."""
+        vars_m_d_s = defaultdict(list)
+        subs_per_m = defaultdict(set)
+        for (m, p, d, h, a, s), var in self.vars_assignacio.items():
+            vars_m_d_s[(m, d, s)].append(var)
+            subs_per_m[m].add(s)
+
+        penalitzacions = []
+        for m, subs in subs_per_m.items():
+            if 1 not in subs or 2 not in subs:
+                continue  # no és un desdoblament A+B
+            for dia in range(self.dies):
+                va = vars_m_d_s.get((m, dia, 1), [])
+                vb = vars_m_d_s.get((m, dia, 2), [])
+                if not va and not vb:
+                    continue
+                fa = self.model.NewBoolVar(f"desd_a_m{m}_d{dia}")
+                fb = self.model.NewBoolVar(f"desd_b_m{m}_d{dia}")
+                self.model.Add(sum(va) >= 1).OnlyEnforceIf(fa)
+                self.model.Add(sum(va) == 0).OnlyEnforceIf(fa.Not())
+                self.model.Add(sum(vb) >= 1).OnlyEnforceIf(fb)
+                self.model.Add(sum(vb) == 0).OnlyEnforceIf(fb.Not())
+                if dur:
+                    self.model.Add(fa == fb)
+                else:
+                    mis = self.model.NewBoolVar(f"desd_mis_m{m}_d{dia}")
+                    self.model.Add(mis >= fa - fb)
+                    self.model.Add(mis >= fb - fa)
+                    penalitzacions.append(mis)
+        return penalitzacions
+
+    def _objectiu_mati_o_tarda(self, dur=False):
+        """Objectiu 'matí o tarda': que un professor NO hagi de venir al matí I a
+        la tarda el mateix dia. Només compten les hores de PRESÈNCIA (mòduls amb
+        validaAssistencia=True; les reunions i similars no). Penalitza cada
+        (professor, dia) amb classes de presència a totes dues franges (frontera
+        `hora_inici_tarda`). Amb `dur`, ho prohibeix."""
+        tarda = self.config.get('hora_inici_tarda', 6)
+        mati_vars = defaultdict(list)
+        tarda_vars = defaultdict(list)
+        for (m, p, d, h, a, s), var in self.vars_assignacio.items():
+            modul = self.modul_per_index.get(m)
+            if modul is not None and modul.get('validaAssistencia', True) is False:
+                continue
+            (mati_vars if h < tarda else tarda_vars)[(p, d)].append(var)
+
+        penalitzacions = []
+        for p_idx in self.professor_per_index:
+            for dia in range(self.dies):
+                vm = mati_vars.get((p_idx, dia), [])
+                vt = tarda_vars.get((p_idx, dia), [])
+                if not vm or not vt:
+                    continue  # aquell dia no pot partir-se en dues franges
+                fm = self.model.NewBoolVar(f"mati_p{p_idx}_d{dia}")
+                ft = self.model.NewBoolVar(f"tarda_p{p_idx}_d{dia}")
+                self.model.Add(sum(vm) >= 1).OnlyEnforceIf(fm)
+                self.model.Add(sum(vm) == 0).OnlyEnforceIf(fm.Not())
+                self.model.Add(sum(vt) >= 1).OnlyEnforceIf(ft)
+                self.model.Add(sum(vt) == 0).OnlyEnforceIf(ft.Not())
+                if dur:
+                    self.model.Add(fm + ft <= 1)
+                else:
+                    partit = self.model.NewBoolVar(f"partit_p{p_idx}_d{dia}")
+                    self.model.AddBoolAnd([fm, ft]).OnlyEnforceIf(partit)
+                    self.model.AddBoolOr([fm.Not(), ft.Not()]).OnlyEnforceIf(partit.Not())
+                    penalitzacions.append(partit)
+        return penalitzacions
+
     def afegir_restriccions(self):
         """Afegeix totes les restriccions al model"""
 
-
+        # Pesos dels objectius configurables (vegeu la funció objectiu, més avall).
+        # Les hores "no disponibles" (vermelles) es tracten aquí (constraint 7):
+        # dur per defecte (pes 100), però es poden relaxar a penalització tova.
+        self._pen_vermelles = []
+        self._w_vermelles = self._pes_objectiu('horesVermelles', 100)
 
         moduls_simultanis = {}  # {modul_idx: [(professor_idx, subgrup, assignacio_idx), ...]}
 
@@ -921,13 +1007,16 @@ class HorariSolver:
                     enforce = [te_fol] + ([lit_pu] if lit_pu is not None else [])
                     self.model.AddBoolOr([inici, final]).OnlyEnforceIf(enforce)
         
-        # 7. Restricció: Respectar restriccions horàries dels professors
+        # 7. Restricció: Respectar les hores "no disponibles" (vermelles) dels
+        # professors. Objectiu configurable `horesVermelles`: pes 100 = dura (cap
+        # classe en aquestes hores, comportament clàssic), 1-99 = penalització tova
+        # (es poden trepitjar amb cost), 0 = s'ignoren.
         for professor in self.professors:
             professor_idx = professor['index']
             restriccions = professor.get('restriccions', {})
 
             lit_desiderata = None
-            if restriccions.get('no_disponible'):
+            if restriccions.get('no_disponible') and self._w_vermelles >= 100:
                 lit_desiderata = self._assumpcio(
                     f"desiderata_p{professor_idx}",
                     f"Desiderates (hores no disponibles) de {professor.get('nom', professor_idx)}")
@@ -937,11 +1026,20 @@ class HorariSolver:
             for dia, hora in restriccions.get('no_disponible', []):
                 if self._es_fixat(professor_idx, dia, hora):
                     continue
-                for (m, p, d, h, a, s) in self.vars_assignacio:
-                    if p == professor_idx and d == dia and h == hora:
-                        c = self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 0)
-                        if lit_desiderata is not None:
-                            c.OnlyEnforceIf(lit_desiderata)
+                if self._w_vermelles >= 100:
+                    # Dura: cap assignació del professor en aquest slot
+                    for (m, p, d, h, a, s) in self.vars_assignacio:
+                        if p == professor_idx and d == dia and h == hora:
+                            c = self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 0)
+                            if lit_desiderata is not None:
+                                c.OnlyEnforceIf(lit_desiderata)
+                elif self._w_vermelles > 0 and (professor_idx, dia, hora) in self.slots_ocupats_professor:
+                    # Tova: penalitza si el professor hi té classe
+                    pen = self.model.NewBoolVar(f"vermella_p{professor_idx}_d{dia}_h{hora}")
+                    ocupat = self.slots_ocupats_professor[(professor_idx, dia, hora)]
+                    self.model.Add(ocupat == 1).OnlyEnforceIf(pen)
+                    self.model.Add(ocupat == 0).OnlyEnforceIf(pen.Not())
+                    self._pen_vermelles.append(pen)
             
             # Prefereix no (penalització, no restricció dura)
             # Aquí podem afegir una penalització a la funció objectiu
@@ -1421,25 +1519,72 @@ class HorariSolver:
                 
                 preferencias_no_respetadas += no_respetada
 
-        # Añadir objetivos a la función de minimización
+        # ---- Funció objectiu configurable (config.objectius de l'editor) --------
+        # Cada objectiu té un pes 0-100: 0 = ignora, 100 = restricció DURA,
+        # 1-99 = penalització tova (com més alt, més prioritat). Els pesos per
+        # defecte reprodueixen el comportament clàssic.
         print("  Configurando función objetivo...")
-        # Definir pesos relativos para cada objetivo (ajustar según prioridades)
-        peso_horas_muertas = 10
-        peso_preferencias = 20
-        # Pes baix: mantenir l'aula preferida només trenca empats i cedeix davant
-        # d'hores mortes o preferències de professor. El solver reubica el mínim
-        # d'hores necessari quan una aula queda saturada.
-        peso_aula = 1
+        w_mortes = self._pes_objectiu('horesMortes', 10)
+        w_grogues = 0 if self.ignora_hores_grogues else self._pes_objectiu('horesGrogues', 20)
+        w_aula = self._pes_objectiu('aulaPreferida', 1)
+        w_desd = self._pes_objectiu('desdoblamentMateixDia', 0)
+        w_mati = self._pes_objectiu('matiOTarda', 0)
 
-        objetivo_total = (total_horas_muertas * peso_horas_muertas
-                          + preferencias_no_respetadas * peso_preferencias
-                          + sum(self.penalitzacio_aula) * peso_aula)
+        termes = []      # expressions dels objectius tous (pes × penalització)
+        resum = []
 
-        # Añadir la función objetivo al modelo
-        self.model.Minimize(objetivo_total)
-        print(f"  Objetivo configurado: {peso_horas_muertas}*horas_muertas "
-              f"+ {peso_preferencias}*preferencias_no_respetadas "
-              f"+ {peso_aula}*aules_no_preferides ({len(self.penalitzacio_aula)} vars)")
+        # Hores mortes dels professors
+        if w_mortes >= 100:
+            self.model.Add(total_horas_muertas == 0)
+            resum.append("hores mortes = 0 (dur)")
+        elif w_mortes > 0:
+            termes.append(total_horas_muertas * w_mortes)
+            resum.append(f"{w_mortes}*hores_mortes")
+
+        # Preferències dels professors (hores grogues, prefereix_no)
+        if w_grogues >= 100:
+            self.model.Add(preferencias_no_respetadas == 0)
+            resum.append("grogues respectades (dur)")
+        elif w_grogues > 0:
+            termes.append(preferencias_no_respetadas * w_grogues)
+            resum.append(f"{w_grogues}*grogues")
+
+        # Hores no disponibles (vermelles) — penalització tova (la versió dura es
+        # fa a la constraint 7); aquí només s'afegeix el terme quan és tova.
+        if 0 < self._w_vermelles < 100 and self._pen_vermelles:
+            termes.append(sum(self._pen_vermelles) * self._w_vermelles)
+            resum.append(f"{self._w_vermelles}*vermelles")
+
+        # Aula preferida
+        if w_aula >= 100:
+            if self.penalitzacio_aula:
+                self.model.Add(sum(self.penalitzacio_aula) == 0)
+            resum.append("aula preferida (dur)")
+        elif w_aula > 0 and self.penalitzacio_aula:
+            termes.append(sum(self.penalitzacio_aula) * w_aula)
+            resum.append(f"{w_aula}*aula")
+
+        # Desdoblaments: mateixa matèria el mateix dia (subgrups A i B)
+        if w_desd > 0:
+            pen_desd = self._objectiu_desdoblament_mateix_dia(dur=(w_desd >= 100))
+            if 0 < w_desd < 100 and pen_desd:
+                termes.append(sum(pen_desd) * w_desd)
+                resum.append(f"{w_desd}*desdoblament_mateix_dia")
+            elif w_desd >= 100:
+                resum.append("desdoblament mateix dia (dur)")
+
+        # Matí o tarda: no partir el dia del professor (només hores de presència)
+        if w_mati > 0:
+            pen_mati = self._objectiu_mati_o_tarda(dur=(w_mati >= 100))
+            if 0 < w_mati < 100 and pen_mati:
+                termes.append(sum(pen_mati) * w_mati)
+                resum.append(f"{w_mati}*mati_o_tarda")
+            elif w_mati >= 100:
+                resum.append("matí o tarda (dur)")
+
+        if termes:
+            self.model.Minimize(sum(termes))
+        print(f"  Objetivo configurado: {' + '.join(resum) if resum else '(cap objectiu tou)'}")
 
 
 
@@ -1493,6 +1638,64 @@ class HorariSolver:
                         'curs': self.curs_per_index.get(curs_idx, {'nom': f'Curs {curs_idx}'})['nom'], 'curs_index': curs_idx,
                         'subgrup': s,
                     })
+        return solucio
+
+    def solucio_des_de_graella(self, graella):
+        """Construeix el dict solucio DIRECTAMENT a partir de la graella d'entrada
+        (matriu [dia][hora][profe]), sense resoldre res. Serveix perquè, en mode
+        'millorar', si ni la millora ni el càlcul de referència acaben dins del
+        temps, es retorni SEMPRE la proposta original (mai UNKNOWN si és vàlida).
+        `objectiu` queda a None (no s'avalua)."""
+        stats = {'temps_resolucio': 0.0, 'conflictes': 0, 'branques': 0,
+                 'estat': 'FEASIBLE', 'objectiu': None, 'cota': None, 'gap': None}
+        solucio = {
+            'horari': [[[[] for _ in range(self.hores_per_dia)] for _ in range(self.dies)] for _ in range(len(self.cursos))],
+            'professors': [[[[] for _ in range(self.hores_per_dia)] for _ in range(self.dies)] for _ in range(len(self.professors))],
+            'aules': [[[[] for _ in range(self.hores_per_dia)] for _ in range(self.dies)] for _ in range(len(self.aules))],
+            'stats': stats,
+        }
+        for d, fila in enumerate(graella or []):
+            if d >= self.dies:
+                break
+            for h, franja in enumerate(fila or []):
+                if h >= self.hores_per_dia:
+                    break
+                for profe_pos, cella in enumerate(franja or []):
+                    if not cella:
+                        continue
+                    p = cella.get('profe', profe_pos)
+                    m = cella.get('modul')
+                    a = cella.get('aula', -1)
+                    s = cella.get('subgrup', 3)
+                    modul = self.modul_per_index.get(m, {'nom': f'Mòdul {m}'})
+                    professor = self.professor_per_index.get(p, {'nom': f'Professor {p}'})
+                    curs_idx = cella.get('curs', modul.get('curs', -1))
+                    aula = self.aula_per_index.get(a, {'nom': f'Aula {a}'})
+                    if 0 <= curs_idx < len(solucio['horari']):
+                        solucio['horari'][curs_idx][d][h].append({
+                            'modul': modul['nom'], 'modul_index': m,
+                            'professor': professor['nom'], 'professor_index': p,
+                            'aula': aula['nom'], 'aula_index': a,
+                            'subgrup': s, 'suport': bool(cella.get('suport')),
+                            'simultani': bool(cella.get('simultani')),
+                        })
+                    if 0 <= p < len(solucio['professors']):
+                        solucio['professors'][p][d][h].append({
+                            'modul': modul['nom'], 'modul_index': m,
+                            'curs': self.curs_per_index.get(curs_idx, {'nom': f'Curs {curs_idx}'})['nom'], 'curs_index': curs_idx,
+                            'aula': aula['nom'], 'aula_index': a, 'subgrup': s,
+                        })
+                    if 0 <= a < len(solucio['aules']):
+                        solucio['aules'][a][d][h].append({
+                            'modul': modul['nom'], 'modul_index': m,
+                            'professor': professor['nom'], 'professor_index': p,
+                            'curs': self.curs_per_index.get(curs_idx, {'nom': f'Curs {curs_idx}'})['nom'], 'curs_index': curs_idx,
+                            'subgrup': s,
+                        })
+        try:
+            solucio['metriques'] = self._metriques(solucio)
+        except Exception:
+            solucio['metriques'] = None
         return solucio
 
     def _metriques(self, solucio):

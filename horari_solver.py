@@ -32,6 +32,9 @@ class Modul:
     horari_disponible: List[Dict] = None
     # Índexs de les aules on es pot impartir, per espai/equipament (buit = qualsevol)
     aules_possibles: List[int] = None
+    # Si les hores d'aquest mòdul compten com a "presència" del professor (per a
+    # dies lliures i per a l'objectiu de matí/tarda). Reunions i similars: False.
+    validaAssistencia: bool = True
 
     def __post_init__(self):
         if self.horari_disponible is None:
@@ -126,6 +129,9 @@ class HorariData:
         # Minut d'inici de cada franja (des de mitjanit), per calcular el descans
         # entre dies. None = el solver farà servir uns valors per defecte.
         self.hores_inici_min = None
+        # Frontera matí/tarda i pesos dels objectius (es fixen a carrega_dades).
+        self.hora_inici_tarda = 6
+        self.objectius = {}
 
     @staticmethod
     def _minuts(hhmm):
@@ -158,6 +164,10 @@ class HorariData:
             if parts:
                 self.hores_per_dia = len(parts)
                 self.hores_inici_min = [self._minuts(t) for t in parts]
+        # Frontera matí/tarda (índex de la primera franja de tarda) i pesos dels
+        # objectius configurables (vegeu Solver.py, funció objectiu).
+        self.hora_inici_tarda = config_editor.get('horaIniciTarda', 6)
+        self.objectius = config_editor.get('objectius') or {}
 
         # Carrega professors
         for prof_data in data.get('professors', []):
@@ -224,7 +234,8 @@ class HorariData:
                 curs=modul_data.get('curs', -1),
                 especialitat=modul_data.get('especialitat', -1),
                 horari_disponible=modul_data.get('horari_disponible', []) or [],
-                aules_possibles=modul_data.get('aules_possibles', []) or []
+                aules_possibles=modul_data.get('aules_possibles', []) or [],
+                validaAssistencia=modul_data.get('validaAssistencia', True)
             )
             self.primera_ultima_per_modul[modul.index] = modul_data.get('primera_ultima_hora')
             self.moduls.append(modul)
@@ -618,7 +629,8 @@ class HorariData:
                     'es_digitalizacio': modul.index in self.moduls_digitalizacio,
                     'professors_assignats': self.professors_per_modul[modul.index],
                     'horari_disponible': modul.horari_disponible,
-                    'aules_possibles': modul.aules_possibles
+                    'aules_possibles': modul.aules_possibles,
+                    'validaAssistencia': modul.validaAssistencia
                 }
                 for modul in self.moduls
             ],
@@ -659,6 +671,8 @@ class HorariData:
                 'dies_setmana': self.dies,
                 'hores_per_dia': self.hores_per_dia,
                 'hores_inici_min': self.hores_inici_min,
+                'hora_inici_tarda': self.hora_inici_tarda,
+                'objectius': self.objectius,
                 'moduls_especials': {
                     'fol': list(self.moduls_fol),
                     'angles': list(self.moduls_angles),
