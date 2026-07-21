@@ -33,6 +33,23 @@ nombre de franges (`hores_per_dia`) i el minut d'inici de cada una (`hores_inici
 per al descans entre dies). Sense `config` fa servir uns valors per defecte de 11
 franges (compatibilitat amb dades antigues).
 
+## ⚠️ Rendiment: la cerca és MOLT dura
+
+Amb les **dades completes reals** (curs 2026-27 informàtica, ~62-69 mil variables),
+trobar **la primera solució factible des de zero costa al voltant de DUES HORES**. No és
+un problema de configuració: el model és gran i molt restringit (hores exactes, sense
+forats per curs/subgrup, posició FOL/tutoria, descans 12 h, dies lliures...). Implicacions:
+
+- Els `max_time_seconds` habituals de proves (30-120 s) **donen `UNKNOWN`** amb dades
+  completes: és normal, no un error. Per generar de zero cal deixar-lo córrer hores
+  (mode asíncron `/api/jobs`, o guardar la solució intermèdia amb `GET /api/jobs/{id}/solucio`).
+- **El camí pràctic és `millorar_horari`** (warm start des d'una proposta): partir d'una
+  graella factible fa que CP-SAT tingui incumbent immediat i només optimitzi.
+- Activar objectius **cars** (sobretot `desdoblamentMateixDia`) afegeix moltes variables i
+  **alenteix encara més** la construcció i la cerca; puja el temps o abaixa el pes.
+- Per això la garantia "mai pitjor" té el fallback a `solucio_des_de_graella`: en aquest
+  règim de temps, sovint no s'arriba ni a avaluar la referència dins del límit.
+
 ## Model de restriccions (el que cal saber)
 
 - Les variables de decisió són `vars_assignacio[(modul, professor, dia, hora, aula, subgrup)]`.
