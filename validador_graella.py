@@ -158,26 +158,27 @@ def valida_graella(dades_processades, graella, hores_txt=None):
     # ========================================================================
     for p in professors:
         p_idx = p['index']
-        celles_profe = [c for c in oc if c['profe'] == p_idx]
-        usades = [False] * len(celles_profe)
+        # Recompte per (modul, subgrup), AULA-AGNÒSTIC: l'aula de l'assignació és
+        # una preferència SUAU (el solver pot repartir les hores entre les
+        # `aules_possibles`), per tant NO forma part del recompte d'hores dures.
+        assignades = defaultdict(int)
         for a in (p.get('moduls') or []):
-            a_idx, a_sub, a_aula = a.get('index'), a.get('subgrup', 3), a.get('aula', -1)
-            coincidents = [i for i, c in enumerate(celles_profe)
-                           if not usades[i] and c['modul'] == a_idx
-                           and c['subgrup'] == a_sub and c['aula'] == a_aula]
-            for i in coincidents:
-                usades[i] = True
-            previstes, posades = a.get('hores', 0), len(coincidents)
-            if posades != previstes:
-                etiq = f"{nom_prof(p_idx)}: {etiq_modul(a_idx)}{sub_curt(a_sub)} a {nom_aula(a_aula)}"
-                detall = f"(en falten {previstes - posades})" if posades < previstes else f"({posades - previstes} de més)"
-                dur('hores', f"{etiq} — {posades} h col·locades de {previstes} {detall}")
-        for i, c in enumerate(celles_profe):
-            if not usades[i]:
-                dur('hores',
-                    f"{nom_prof(p_idx)}: hi ha una hora de {etiq_modul(c['modul'])}{sub_curt(c['subgrup'])} "
-                    f"a {nom_aula(c['aula'])} ({nom_dia(c['dia'])} {nom_hora(c['hora'])}) que no correspon a cap assignació seva",
-                    c['dia'], c['hora'])
+            assignades[(a.get('index'), a.get('subgrup', 3))] += a.get('hores', 0)
+        posades = defaultdict(int)
+        for c in oc:
+            if c['profe'] == p_idx:
+                posades[(c['modul'], c['subgrup'])] += 1
+        for (m, s) in set(assignades) | set(posades):
+            exp, got = assignades.get((m, s), 0), posades.get((m, s), 0)
+            if exp == got:
+                continue
+            if exp == 0:
+                dur('hores', f"{nom_prof(p_idx)} fa {got} h de {etiq_modul(m)}{sub_curt(s)} "
+                    f"que no té assignades")
+            else:
+                detall = f"(en falten {exp - got})" if got < exp else f"({got - exp} de més)"
+                dur('hores', f"{nom_prof(p_idx)}: {etiq_modul(m)}{sub_curt(s)} — "
+                    f"{got} h col·locades de {exp} {detall}")
 
     # ========================================================================
     # 2 — Ocupació d'aula: una aula no pot tenir dues classes alhora (excepte
@@ -187,25 +188,34 @@ def valida_graella(dades_processades, graella, hores_txt=None):
     for c in oc:
         per_aula[(c['dia'], c['hora'], c['aula'])].append(c)
     for (dia, hora, _aula), grup in per_aula.items():
-        if len(grup) < 2 or all(c['simultani'] for c in grup):
+        # Diverses classes del MATEIX mòdul a la mateixa aula = co-docència
+        # (reunions, professor de suport, mòduls simultanis): NO és conflicte. Ho
+        # és quan hi ha mòduls DIFERENTS competint per la mateixa aula.
+        if len({c['modul'] for c in grup}) < 2:
             continue
         detall = ', '.join(f"{etiq_modul(c['modul'])}{sub_curt(c['subgrup'])} ({nom_prof(c['profe'])})" for c in grup)
-        dur('aula', f"{nom_dia(dia)} {nom_hora(hora)} — {nom_aula(grup[0]['aula'])} té {len(grup)} classes alhora: {detall}",
+        dur('aula', f"{nom_dia(dia)} {nom_hora(hora)} — {nom_aula(grup[0]['aula'])} té classes de mòduls diferents alhora: {detall}",
             dia, hora)
 
     # ========================================================================
     # 3 — Solapament de curs: a la mateixa hora, un curs només pot tenir un grup
     #     sencer (subgrup 3) o els dos mig-grups complementaris (1 i 2).
     # ========================================================================
-    per_curs_hora = defaultdict(list)
+    per_curs_hora = defaultdict(set)
     for c in oc:
-        per_curs_hora[(c['dia'], c['hora'], c['curs'])].append(c)
-    for (dia, hora, curs), grup in per_curs_hora.items():
-        if len(grup) < 2:
+        # Col·lapsa la co-docència: diversos professors del mateix (modul, subgrup)
+        # són UNA classe. Així una reunió (curs "Tots", molts professors, mateix
+        # mòdul) no compta com a solapament.
+        per_curs_hora[(c['dia'], c['hora'], c['curs'])].add((c['modul'], c['subgrup']))
+    for (dia, hora, curs), parells in per_curs_hora.items():
+        if len(parells) < 2:
             continue
-        if len(grup) == 2 and sorted(c['subgrup'] for c in grup) == [1, 2]:
+        subgrups = sorted(s for _m, s in parells)
+        # Vàlid: dos mig-grups complementaris (subgrup 1 i 2, poden ser de mòduls
+        # diferents = desdoblament). Qualsevol altra combinació és un solapament.
+        if len(parells) == 2 and subgrups == [1, 2]:
             continue
-        detall = ', '.join(f"{etiq_modul(c['modul'])}{sub_curt(c['subgrup'])}" for c in grup)
+        detall = ', '.join(f"{etiq_modul(m)}{sub_curt(s)}" for m, s in sorted(parells))
         dur('curs', f"{nom_dia(dia)} {nom_hora(hora)} — {nom_curs(curs)} té classes incompatibles alhora: {detall}",
             dia, hora)
 

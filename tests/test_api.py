@@ -442,6 +442,51 @@ def test_preprocess_horari_format_editor(solucio_real, dades_reals):
         assert fix['professor'] >= 0
 
 
+def test_valida_graella_codocencia():
+    """Co-docència (mateix mòdul, diversos professors a la mateixa aula/hora, com
+    una reunió) NO és conflicte d'aula ni de curs."""
+    from validador_graella import valida_graella
+    dp = {
+        'configuracio': {'dies_setmana': 5, 'hores_per_dia': 6,
+                         'moduls_especials': {'moduls_coordinats': []}},
+        'professors': [
+            {'index': 0, 'nom': 'A', '7hores': False, 'restriccions': {},
+             'moduls': [{'index': 10, 'subgrup': 3, 'aula': 0, 'hores': 2}]},
+            {'index': 1, 'nom': 'B', '7hores': False, 'restriccions': {},
+             'moduls': [{'index': 10, 'subgrup': 3, 'aula': 0, 'hores': 2}]},
+        ],
+        'moduls': [{'index': 10, 'codi': 'RD', 'nom': 'Reunió', 'curs': 0}],
+        'cursos': [{'index': 0, 'nom': 'Tots', 'subgrups': [3],
+                    'necessita_aula_gran': False, 'horari_disponible': []}],
+        'aules': [{'index': 0, 'nom': 'Reunions', 'aula_gran': True, 'nomes_tardes': False}],
+    }
+    cel = {'modul': 10, 'curs': 0, 'aula': 0, 'subgrup': 3, 'suport': False, 'simultani': False}
+    graella = [[[dict(cel), dict(cel)], [dict(cel), dict(cel)], [], [], [], []], [], [], [], []]
+    durs = [i for i in valida_graella(dp, graella) if i['gravetat'] == 'dura']
+    assert durs == [], durs
+
+
+def test_valida_graella_hores_aula_agnostic():
+    """Repartir les hores d'una assignació entre aules diferents (l'aula és una
+    preferència suau del solver) NO és un incompliment d'hores."""
+    from validador_graella import valida_graella
+    dp = {
+        'configuracio': {'dies_setmana': 5, 'hores_per_dia': 6,
+                         'moduls_especials': {'moduls_coordinats': []}},
+        'professors': [{'index': 0, 'nom': 'A', '7hores': False, 'restriccions': {},
+                        'moduls': [{'index': 10, 'subgrup': 3, 'aula': 0, 'hores': 2}]}],
+        'moduls': [{'index': 10, 'codi': 'M', 'nom': 'Mòdul', 'curs': 0}],
+        'cursos': [{'index': 0, 'nom': 'C', 'subgrups': [3],
+                    'necessita_aula_gran': False, 'horari_disponible': []}],
+        'aules': [{'index': 0, 'nom': 'A0', 'aula_gran': True, 'nomes_tardes': False},
+                  {'index': 1, 'nom': 'A1', 'aula_gran': True, 'nomes_tardes': False}],
+    }
+    c0 = {'modul': 10, 'curs': 0, 'aula': 0, 'subgrup': 3, 'suport': False, 'simultani': False}
+    c1 = {'modul': 10, 'curs': 0, 'aula': 1, 'subgrup': 3, 'suport': False, 'simultani': False}
+    graella = [[[c0], [c1], [], [], [], []], [], [], [], []]
+    assert [i for i in valida_graella(dp, graella) if i['gravetat'] == 'dura'] == []
+
+
 def test_solve_fixacio_impossible(solucio_real, dades_reals):
     """Fixar més hores que les de l'assignació ha de donar INFEASIBLE."""
     # Placements reals d'una assignació concreta (garanteixen slots vàlids);
