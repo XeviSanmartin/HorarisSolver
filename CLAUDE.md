@@ -227,9 +227,14 @@ forats per curs/subgrup, posició FOL/tutoria, descans 12 h, dies lliures...). I
   dura només amb pes 100 (per defecte); amb 1-99 penalitza suau (vars a
   `self._pen_vermelles`), amb 0 s'ignora. Es llegeix a l'inici d'`afegir_restriccions`
   (`self._w_vermelles`).
-- **Objectius nous**: `_objectiu_desdoblament_mateix_dia` (que els subgrups A/B d'un
-  mòdul desdoblat facin la matèria els mateixos dies; XOR per (mòdul, dia)) i
-  `_objectiu_mati_o_tarda` (que un professor no vingui matí I tarda el mateix dia;
+- **Objectius nous**: `_objectiu_desdoblament_mateix_dia` — que els subgrups A/B d'un mòdul
+  desdoblat ocupin els MATEIXOS DIES. Es mesura **per (mòdul, dia) amb presència booleana**
+  (`fa` = A fa el mòdul aquest dia, `fb` = B; penalitza XOR `fa≠fb`), **no** comptant hores per
+  dia. Així: repartiment `[2]` → tots dos el mateix dia; `[1,1]` → poden anar 1 h d'A + 1 h de B
+  un dia i l'altra hora de cada un un altre dia (0 penalització si A i B usen els mateixos dos
+  dies). NO obliga a ficar-ho tot en un sol dia. ⚠️ Assumeix que A i B tenen el mateix repartiment
+  (el cas normal d'un desdoblament); si difereixen, penalitza el/s dia/es que no es poden aparellar.
+  `_objectiu_mati_o_tarda` — que un professor no vingui matí I tarda el mateix dia;
   només compten les hores de **presència**, `validaAssistencia`; frontera
   `hora_inici_tarda`). Amb pes 100 s'imposen com a restricció dura.
 - ⚠️ **`validaAssistencia`** ara es propaga de debò (Modul dataclass + `carrega_dades`
