@@ -7,7 +7,7 @@
       "name": "HorarisSolver",
       "url": "https://github.com/XeviSanmartin/HorarisSolver"
     },
-    "version": "1.8.0"
+    "version": "1.10.0"
   },
   "paths": {
     "/api/health": {
@@ -57,6 +57,41 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RespostaValidate"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "El cos de la petició no compleix l'esquema (error Pydantic estàndard) o les dades tenen una incoherència estructural profunda (cos `DetallError`)."
+          }
+        }
+      }
+    },
+    "/api/validate-horari": {
+      "post": {
+        "tags": [
+          "Validació"
+        ],
+        "summary": "Valida EXHAUSTIVAMENT una graella d'horari",
+        "description": "Valida la graella del `periode` contra les restriccions dures del solver i\nretorna TOTS els incompliments (durs i tous), amb missatges llegibles i\nlocalitzats. No resol res: triga mil·lisegons.\n\nÉs la MATEIXA validació (font única de veritat) que fa de porta el mode\n`opcions.millorar_horari` de `/api/solve` i `/api/jobs`: si aquí `valid` és\nfals (hi ha incompliments durs), la millora retornaria `HORARI_INVALID`.",
+        "operationId": "validate_horari_api_validate_horari_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticioValidate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaValidaHorari"
                 }
               }
             }
@@ -714,6 +749,47 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "IncomplimentGraella": {
+        "properties": {
+          "regla": {
+            "type": "string",
+            "title": "Regla",
+            "description": "Codi de la regla incomplerta (vegeu `regles`)."
+          },
+          "gravetat": {
+            "type": "string",
+            "title": "Gravetat",
+            "description": "'dura' (restricció dura: bloqueja la millora) o 'tova' (preferència 'prefereix no': només informa).",
+            "examples": [
+              "dura"
+            ]
+          },
+          "missatge": {
+            "type": "string",
+            "title": "Missatge",
+            "description": "Descripció llegible i localitzada de l'incompliment."
+          },
+          "dia": {
+            "type": "integer",
+            "title": "Dia",
+            "description": "Dia 0–4 (o -1 si no aplica a un slot concret)."
+          },
+          "hora": {
+            "type": "integer",
+            "title": "Hora",
+            "description": "Hora 0-based (o -1 si no aplica a un slot concret)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "regla",
+          "gravetat",
+          "missatge",
+          "dia",
+          "hora"
+        ],
+        "title": "IncomplimentGraella"
+      },
       "ModulCataleg": {
         "properties": {
           "index": {
@@ -897,6 +973,12 @@
             "type": "boolean",
             "title": "Explicar Infeasible",
             "description": "Si és cert i el resultat és INFEASIBLE, la resposta inclou `motiu_infeasible`: els grups de restriccions que formen el conflicte (desiderates d'un professor, hores fixades, FOL/anglès, tutoria, mòduls coordinats...). Té un cost de rendiment (el model es resol amb literals d'assumpció), per això per defecte està desactivat.",
+            "default": false
+          },
+          "millorar_horari": {
+            "type": "boolean",
+            "title": "Millorar Horari",
+            "description": "Si és cert, el solver parteix de la graella de `dades.horari` del `periode` com a punt de partida i la MILLORA (warm start), en comptes de generar-la de zero. PRIMER valida que la graella no incompleixi cap restricció dura (validació estricta, sense les exempcions de `fixar_horari`): si no és vàlida, l'estat és `HORARI_INVALID` amb el motiu a `motiu_infeasible` i NO es fa la millora. Si és vàlida, optimitza el mateix objectiu i el resultat mai és pitjor que la graella de partida. Té precedència sobre `fixar_horari`.",
             "default": false
           }
         },
@@ -1190,7 +1272,7 @@
             "type": "string",
             "title": "Versio Api",
             "examples": [
-              "1.8.0"
+              "1.10.0"
             ]
           },
           "max_temps_solver": {
@@ -1246,7 +1328,7 @@
           "estat": {
             "type": "string",
             "title": "Estat",
-            "description": "Resultat de la resolució: 'OPTIMAL', 'FEASIBLE', 'INFEASIBLE', 'UNKNOWN' o 'MODEL_INVALID'.",
+            "description": "Resultat de la resolució: 'OPTIMAL', 'FEASIBLE', 'INFEASIBLE', 'UNKNOWN', 'MODEL_INVALID' o 'HORARI_INVALID' (amb `opcions.millorar_horari`, quan la graella de partida incompleix una restricció dura; el motiu és a `motiu_infeasible`).",
             "examples": [
               "FEASIBLE"
             ]
@@ -1296,7 +1378,7 @@
               }
             ],
             "title": "Motiu Infeasible",
-            "description": "Grups de restriccions que formen el conflicte quan l'estat és INFEASIBLE (present només amb `opcions.explicar_infeasible`). El conjunt és suficient per causar la infactibilitat, no necessàriament mínim. Buit = el conflicte és a les restriccions estructurals (hores exactes, solapaments, horaris disponibles)."
+            "description": "Grups de restriccions que formen el conflicte quan l'estat és INFEASIBLE (present només amb `opcions.explicar_infeasible`) o HORARI_INVALID (amb `opcions.millorar_horari`, sempre). El conjunt és suficient per causar la infactibilitat, no necessàriament mínim. Buit = el conflicte és a les restriccions estructurals (hores exactes, solapaments, horaris disponibles)."
           }
         },
         "type": "object",
@@ -1304,6 +1386,50 @@
           "estat"
         ],
         "title": "RespostaSolve"
+      },
+      "RespostaValidaHorari": {
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "title": "Valid",
+            "description": "Cert si no hi ha cap incompliment DUR."
+          },
+          "total_durs": {
+            "type": "integer",
+            "title": "Total Durs",
+            "description": "Nombre d'incompliments durs (bloquegen la millora)."
+          },
+          "total_tous": {
+            "type": "integer",
+            "title": "Total Tous",
+            "description": "Nombre d'avisos tous (preferències, no bloquegen)."
+          },
+          "incompliments": {
+            "items": {
+              "$ref": "#/components/schemas/IncomplimentGraella"
+            },
+            "type": "array",
+            "title": "Incompliments",
+            "description": "Tots els incompliments detectats, ordenats per (dia, hora)."
+          },
+          "regles": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Regles",
+            "description": "Mapa codi_regla → nom llegible, per agrupar l'informe."
+          }
+        },
+        "type": "object",
+        "required": [
+          "valid",
+          "total_durs",
+          "total_tous",
+          "incompliments",
+          "regles"
+        ],
+        "title": "RespostaValidaHorari"
       },
       "RespostaValidate": {
         "properties": {

@@ -32,6 +32,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from horari_solver import HorariData
 from Solver import HorariSolver, genera_json_solucio_compatible, calcula_gap
+from validador_graella import valida_graella, REGLES
 
 # Límit dur del temps de resolució. A Vercel la funció té un maxDuration
 # (configurat a vercel.json); deixem marge per al preprocessament i la resposta.
@@ -42,7 +43,7 @@ MAX_TEMPS_SOLVER = float(os.environ.get('MAX_TEMPS_SOLVER', 280))
 # Per defecte s'accepta qualsevol origen: l'API no té estat ni credencials.
 CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',') if o.strip()]
 
-VERSIO_API = '1.8.0'
+VERSIO_API = '1.10.0'
 
 DESCRIPCIO = """
 Servei de generació d'horaris escolars amb [OR-Tools CP-SAT](https://developers.google.com/optimization).
@@ -353,6 +354,16 @@ class OpcionsSolve(BaseModel):
                     '(desiderates d\'un professor, hores fixades, FOL/anglès, tutoria, '
                     'mòduls coordinats...). Té un cost de rendiment (el model es resol amb '
                     'literals d\'assumpció), per això per defecte està desactivat.')
+    millorar_horari: bool = Field(
+        default=False,
+        description='Si és cert, el solver parteix de la graella de `dades.horari` del '
+                    '`periode` com a punt de partida i la MILLORA (warm start), en comptes '
+                    'de generar-la de zero. PRIMER valida que la graella no incompleixi cap '
+                    'restricció dura (validació estricta, sense les exempcions de '
+                    '`fixar_horari`): si no és vàlida, l\'estat és `HORARI_INVALID` amb el '
+                    'motiu a `motiu_infeasible` i NO es fa la millora. Si és vàlida, optimitza '
+                    'el mateix objectiu i el resultat mai és pitjor que la graella de partida. '
+                    'Té precedència sobre `fixar_horari`.')
 
 
 class PeticioSolve(BaseModel):
@@ -392,6 +403,27 @@ class RespostaValidate(BaseModel):
             'moduls_digitalizacio': 3, 'moduls_suport': 0, 'moduls_simultaneos': 2,
             'tutories': 9, 'subgrups_per_curs': {'0': [1, 2, 3]},
         }])
+
+
+class IncomplimentGraella(BaseModel):
+    regla: str = Field(description='Codi de la regla incomplerta (vegeu `regles`).')
+    gravetat: str = Field(
+        description="'dura' (restricció dura: bloqueja la millora) o 'tova' "
+                    "(preferència 'prefereix no': només informa).",
+        examples=['dura'])
+    missatge: str = Field(description='Descripció llegible i localitzada de l\'incompliment.')
+    dia: int = Field(description='Dia 0–4 (o -1 si no aplica a un slot concret).')
+    hora: int = Field(description='Hora 0-based (o -1 si no aplica a un slot concret).')
+
+
+class RespostaValidaHorari(BaseModel):
+    valid: bool = Field(description='Cert si no hi ha cap incompliment DUR.')
+    total_durs: int = Field(description='Nombre d\'incompliments durs (bloquegen la millora).')
+    total_tous: int = Field(description='Nombre d\'avisos tous (preferències, no bloquegen).')
+    incompliments: list[IncomplimentGraella] = Field(
+        description='Tots els incompliments detectats, ordenats per (dia, hora).')
+    regles: dict[str, str] = Field(
+        description='Mapa codi_regla → nom llegible, per agrupar l\'informe.')
 
 
 class RespostaPreprocess(BaseModel):
@@ -436,7 +468,9 @@ class Solucio(BaseModel):
 class RespostaSolve(BaseModel):
     estat: str = Field(
         description="Resultat de la resolució: 'OPTIMAL', 'FEASIBLE', 'INFEASIBLE', "
-                    "'UNKNOWN' o 'MODEL_INVALID'.",
+                    "'UNKNOWN', 'MODEL_INVALID' o 'HORARI_INVALID' (amb "
+                    "`opcions.millorar_horari`, quan la graella de partida incompleix una "
+                    "restricció dura; el motiu és a `motiu_infeasible`).",
         examples=['FEASIBLE'])
     solucio: Optional[Solucio] = Field(
         default=None, description="Present només si l'estat és OPTIMAL o FEASIBLE.")
@@ -450,7 +484,8 @@ class RespostaSolve(BaseModel):
     motiu_infeasible: Optional[list[str]] = Field(
         default=None,
         description="Grups de restriccions que formen el conflicte quan l'estat és "
-                    "INFEASIBLE (present només amb `opcions.explicar_infeasible`). "
+                    "INFEASIBLE (present només amb `opcions.explicar_infeasible`) o "
+                    "HORARI_INVALID (amb `opcions.millorar_horari`, sempre). "
                     "El conjunt és suficient per causar la infactibilitat, no "
                     "necessàriament mínim. Buit = el conflicte és a les restriccions "
                     "estructurals (hores exactes, solapaments, horaris disponibles).")
@@ -646,6 +681,32 @@ def validate(peticio: PeticioValidate) -> RespostaValidate:
     )
 
 
+@app.post('/api/validate-horari', response_model=RespostaValidaHorari, tags=['Validació'],
+          summary="Valida EXHAUSTIVAMENT una graella d'horari",
+          responses={k: v for k, v in RESPOSTES_DADES.items() if k != 500})
+def validate_horari(peticio: PeticioValidate) -> RespostaValidaHorari:
+    """Valida la graella del `periode` contra les restriccions dures del solver i
+    retorna TOTS els incompliments (durs i tous), amb missatges llegibles i
+    localitzats. No resol res: triga mil·lisegons.
+
+    És la MATEIXA validació (font única de veritat) que fa de porta el mode
+    `opcions.millorar_horari` de `/api/solve` i `/api/jobs`: si aquí `valid` és
+    fals (hi ha incompliments durs), la millora retornaria `HORARI_INVALID`.
+    """
+    hd, _advertiments = _preprocessa(peticio.dades, periode=peticio.periode)
+    dades_processades = hd.genera_dades_processades()
+    graella, hores_txt = _graella_periode(peticio.dades.com_a_dict(), peticio.periode)
+    incompliments = valida_graella(dades_processades, graella, hores_txt)
+    durs = sum(1 for i in incompliments if i['gravetat'] == 'dura')
+    return RespostaValidaHorari(
+        valid=durs == 0,
+        total_durs=durs,
+        total_tous=len(incompliments) - durs,
+        incompliments=incompliments,
+        regles=REGLES,
+    )
+
+
 @app.post('/api/preprocess', response_model=RespostaPreprocess, tags=['Validació'],
           summary='Retorna les dades preprocessades (debug)',
           responses={k: v for k, v in RESPOSTES_DADES.items() if k != 500})
@@ -679,20 +740,14 @@ def solve(peticio: PeticioSolve) -> RespostaSolve:
     dades_processades = hd.genera_dades_processades()
     _afegeix_advertiments_fixacio(advertiments, dades_processades, opcions)
 
+    template = peticio.dades.com_a_dict()
     try:
         with _silenci():
-            solver = HorariSolver(dades_processades)
-            solucio = solver.executar(
-                fixar_horari=opcions.fixar_horari,
-                explicar_infeasible=opcions.explicar_infeasible,
-                ignora_hores_grogues=opcions.ignora_hores_grogues,
-                max_time_seconds=max_time,
-                num_workers=opcions.num_workers,
-                log_search_progress=False,
-                output_path=None,
-            )
-            return _construeix_resposta_solve(
-                solver, solucio, opcions, peticio.dades.com_a_dict(), advertiments)
+            solver, solucio, motiu_invalid = _resol_solver(
+                dades_processades, opcions, max_time,
+                template=template, advertiments=advertiments)
+            return _resposta_final(
+                solver, solucio, motiu_invalid, opcions, template, advertiments)
     except HTTPException:
         raise
     except Exception as e:
@@ -772,29 +827,121 @@ def _neteja_feines():
             del FEINES[fid]
 
 
+def _graella_periode(template: Optional[dict], periode: int):
+    """Extreu la graella crua del `periode` i les franges horàries (per als
+    missatges) del cos original de la petició (`dades` en format Solver.json)."""
+    horari = (template or {}).get('horari') or []
+    graella = horari[periode] if 0 <= periode < len(horari) else []
+    hores_str = ((template or {}).get('config') or {}).get('horesSetmana')
+    hores_txt = hores_str.split(',') if hores_str else None
+    return graella, hores_txt
+
+
+def _resol_solver(dades_processades: dict, opcions: OpcionsSolve, max_time: float,
+                  feina: Optional[dict] = None, template: Optional[dict] = None,
+                  advertiments: Optional[list] = None):
+    """Resol o millora el model. Retorna (solver, solucio, motiu_invalid).
+
+    - Mode normal: crida `solver.executar()`; `motiu_invalid` és None.
+    - Mode `millorar_horari`:
+        FASE 1 — validació EXHAUSTIVA i determinista de la graella de partida amb
+          `valida_graella` (la MATEIXA que fa servir `POST /api/validate-horari`:
+          una sola font de veritat). Si té incompliments DURS, retorna
+          (None, None, motius) SENSE millorar → HORARI_INVALID.
+        FASE 2 — millora amb warm start (`AddHint`). A més, calcula l'objectiu de
+          referència de la proposta (graella fixada) i, si la millora NO el supera
+          dins del temps, retorna la proposta original (garantia "mai pitjor").
+
+    Si es passa `feina`, cada solver es registra a `feina['_solver']` (perquè
+    `atura()` hi arribi) i la fase llarga informa del progrés amb `_CallbackProgres`.
+    """
+    def _registra(solver):
+        if feina is not None:
+            feina['_solver'] = solver
+            if feina.get('aturada_demanada'):
+                solver.atura()
+
+    def _callback(solver):
+        return _CallbackProgres(feina, solver) if feina is not None else None
+
+    if opcions.millorar_horari:
+        # FASE 1 — validació exhaustiva i determinista de la graella de partida
+        graella, hores_txt = _graella_periode(template, opcions.periode)
+        incompliments = valida_graella(dades_processades, graella, hores_txt)
+        durs = [i['missatge'] for i in incompliments if i['gravetat'] == 'dura']
+        if durs:
+            return None, None, durs
+
+        # Objectiu de referència: la proposta amb la graella fixada.
+        solver_base = HorariSolver(dades_processades)
+        _registra(solver_base)
+        baseline = solver_base.resol_grid_fixat(
+            ignora_hores_grogues=opcions.ignora_hores_grogues,
+            max_time_seconds=min(30.0, max_time), num_workers=opcions.num_workers)
+
+        # FASE 2 — millora amb warm start
+        solver = HorariSolver(dades_processades)
+        _registra(solver)
+        millorada = solver.millora(
+            explicar_infeasible=opcions.explicar_infeasible,
+            ignora_hores_grogues=opcions.ignora_hores_grogues,
+            max_time_seconds=max_time,
+            num_workers=opcions.num_workers,
+            log_search_progress=False,
+            output_path=None,
+            solution_callback=_callback(solver),
+        )
+
+        # Garantia "mai pitjor": si la millora no supera la proposta dins del
+        # temps, es retorna la proposta original sense canvis.
+        solucio = millorada
+        if baseline is not None and (
+                millorada is None
+                or millorada['stats']['objectiu'] > baseline['stats']['objectiu'] + 1e-6):
+            solucio = baseline
+            if advertiments is not None:
+                advertiments.append(
+                    "La millora no ha superat la proposta de partida dins del temps "
+                    "disponible: es retorna la proposta original sense canvis.")
+        return solver, solucio, None
+
+    # Mode normal
+    solver = HorariSolver(dades_processades)
+    _registra(solver)
+    solucio = solver.executar(
+        fixar_horari=opcions.fixar_horari,
+        explicar_infeasible=opcions.explicar_infeasible,
+        ignora_hores_grogues=opcions.ignora_hores_grogues,
+        max_time_seconds=max_time,
+        num_workers=opcions.num_workers,
+        log_search_progress=False,
+        output_path=None,
+        solution_callback=_callback(solver),
+    )
+    return solver, solucio, None
+
+
+def _resposta_final(solver, solucio, motiu_invalid, opcions: OpcionsSolve,
+                    template: dict, advertiments: list[str]) -> RespostaSolve:
+    """Construeix la RespostaSolve, tractant el cas HORARI_INVALID de millorar_horari."""
+    if motiu_invalid is not None:
+        return RespostaSolve(estat='HORARI_INVALID', advertiments=advertiments,
+                             motiu_infeasible=motiu_invalid)
+    return _construeix_resposta_solve(solver, solucio, opcions, template, advertiments)
+
+
 def _executa_feina(feina: dict, dades_processades: dict, opcions: OpcionsSolve,
                    template: dict, max_time: float):
     """Cos del fil de treball d'una feina."""
     try:
         with _silenci():
-            solver = HorariSolver(dades_processades)
-            feina['_solver'] = solver
             feina['_template'] = template
-            # Cobreix l'aturada demanada abans que el solver existís
-            if feina['aturada_demanada']:
-                solver.atura()
-            solucio = solver.executar(
-                fixar_horari=opcions.fixar_horari,
-                explicar_infeasible=opcions.explicar_infeasible,
-                ignora_hores_grogues=opcions.ignora_hores_grogues,
-                max_time_seconds=max_time,
-                num_workers=opcions.num_workers,
-                log_search_progress=False,
-                output_path=None,
-                solution_callback=_CallbackProgres(feina, solver),
-            )
-            feina['resultat'] = _construeix_resposta_solve(
-                solver, solucio, opcions, template, feina['advertiments'])
+            solver, solucio, motiu_invalid = _resol_solver(
+                dades_processades, opcions, max_time, feina=feina,
+                template=template, advertiments=feina['advertiments'])
+            feina['resultat'] = _resposta_final(
+                solver, solucio, motiu_invalid, opcions, template,
+                feina['advertiments'])
         feina['estat_feina'] = 'acabada'
     except Exception as e:
         feina['error'] = DetallError(

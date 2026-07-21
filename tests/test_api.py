@@ -206,6 +206,24 @@ def _matriu_horari_buida():
     return [[[] for _ in range(11)] for _ in range(5)]
 
 
+def _matriu_de_solucio(solucio):
+    """Converteix solucio['horari'] (per curs/dia/hora) en la matriu [dia][hora] del
+    format editor, per reenviar-la com a `dades.horari` (seed de fixar/millorar)."""
+    matriu = _matriu_horari_buida()
+    for c_idx, curs in enumerate(solucio['horari']):
+        for d, dia in enumerate(curs):
+            for h, classes in enumerate(dia):
+                for classe in classes:
+                    matriu[d][h].append({
+                        'modul': classe['modul_index'], 'curs': c_idx,
+                        'aula': classe['aula_index'], 'subgrup': classe['subgrup'],
+                        'suport': classe.get('suport', False),
+                        'simultani': classe.get('simultani', False),
+                        'profe': classe['professor_index'],
+                    })
+    return matriu
+
+
 def test_preprocess_horari_fixat(dades_reals):
     """El camp horari del Solver.json real (període 0) s'ha de normalitzar
     a horari_fixat amb una entrada per cel·la ocupada vàlida."""
@@ -287,6 +305,141 @@ def test_solve_fixar_horari(solucio_real, dades_reals):
                 assert esperades == obtingudes, (
                     f'Curs {c_idx} dia {d} hora {h}: fixat {esperades}, obtingut {obtingudes}'
                 )
+
+
+def test_millorar_horari_valid(solucio_real, dades_reals):
+    """Millorar una solució vàlida: es valida i s'optimitza, i el resultat mai és
+    pitjor que la graella de partida (objectiu <= objectiu original)."""
+    dades = copy.deepcopy(dades_reals)
+    dades['horari'] = [_matriu_de_solucio(solucio_real['solucio'])]
+
+    r = client.post('/api/solve', json={
+        'dades': dades,
+        'opcions': {'max_time_seconds': 60, 'num_workers': 8, 'millorar_horari': True},
+    })
+    assert r.status_code == 200, r.text
+    cos = r.json()
+    assert cos['estat'] in ('OPTIMAL', 'FEASIBLE'), cos
+    assert cos['solucio'] is not None
+    obj_millorat = cos['solucio']['stats']['objectiu']
+    obj_original = solucio_real['solucio']['stats']['objectiu']
+    assert obj_millorat <= obj_original + 1e-6, (obj_millorat, obj_original)
+
+
+def test_millorar_horari_invalid(solucio_real, dades_reals):
+    """Millorar un horari que incompleix una restricció dura retorna HORARI_INVALID
+    amb motiu i sense fer cap millora. Aquí es redueixen les hores requerides d'una
+    assignació per sota de les que la graella hi col·loca: la graella en fixa més de
+    les permeses → el model és infactible."""
+    from collections import Counter
+    matriu = _matriu_de_solucio(solucio_real['solucio'])
+
+    # Hores col·locades per (mòdul, professor, subgrup) a la graella
+    comptador = Counter()
+    for dia in matriu:
+        for celles in dia:
+            for c in celles:
+                comptador[(c['modul'], c['profe'], c['subgrup'])] += 1
+    (m, p, s), n = next(((k, v) for k, v in comptador.items() if v >= 2), (None, 0))
+    assert n >= 2, "Cap assignació amb >=2 hores col·locades"
+
+    dades = copy.deepcopy(dades_reals)
+    dades['horari'] = [matriu]
+    prof = next(pr for pr in dades['professors'] if pr['index'] == p)
+    assign = next(a for a in prof['moduls']
+                  if a['index'] == m and a.get('subgrup', 3) == s)
+    assign['hores'] = n - 1   # la graella en fixa n > n-1 permeses → invàlid
+
+    r = client.post('/api/solve', json={
+        'dades': dades,
+        'opcions': {'max_time_seconds': 60, 'num_workers': 8, 'millorar_horari': True},
+    })
+    assert r.status_code == 200, r.text
+    cos = r.json()
+    assert cos['estat'] == 'HORARI_INVALID', cos
+    assert cos['motiu_infeasible'], cos
+    # `/api/solve` fa servir response_model_exclude_none=True: quan no hi ha
+    # solució, el camp `solucio` s'omet del JSON (no hi és, en lloc de ser None).
+    assert cos.get('solucio') is None
+
+
+def _matriu_editor(solucio):
+    """Com _matriu_de_solucio però en el FORMAT REAL de l'editor: matriu[dia][hora]
+    és una llista indexada per l'índex del professor (la POSICIÓ), amb None als
+    buits i cel·les SENSE camp 'profe'."""
+    max_p = 0
+    for curs in solucio['horari']:
+        for dia in curs:
+            for classes in dia:
+                for c in classes:
+                    max_p = max(max_p, c['professor_index'])
+    matriu = [[[None] * (max_p + 1) for _ in range(11)] for _ in range(5)]
+    for c_idx, curs in enumerate(solucio['horari']):
+        for d, dia in enumerate(curs):
+            for h, classes in enumerate(dia):
+                for classe in classes:
+                    matriu[d][h][classe['professor_index']] = {
+                        'modul': classe['modul_index'], 'curs': c_idx,
+                        'aula': classe['aula_index'], 'subgrup': classe['subgrup'],
+                        'suport': classe.get('suport', False),
+                        'simultani': classe.get('simultani', False),
+                    }
+    return matriu
+
+
+def test_validate_horari_solucio_valida(solucio_real, dades_reals):
+    """Una solució vàlida del solver no ha de tenir cap incompliment DUR."""
+    dades = copy.deepcopy(dades_reals)
+    dades['horari'] = [_matriu_de_solucio(solucio_real['solucio'])]
+    r = client.post('/api/validate-horari', json={'dades': dades, 'periode': 0})
+    assert r.status_code == 200, r.text
+    cos = r.json()
+    assert cos['valid'] is True, [i['missatge'] for i in cos['incompliments'] if i['gravetat'] == 'dura']
+    assert cos['total_durs'] == 0
+    assert isinstance(cos['regles'], dict) and cos['regles']
+
+
+def test_validate_horari_format_editor(solucio_real, dades_reals):
+    """La validació funciona amb el format real de l'editor (indexat per professor,
+    cel·les sense camp 'profe')."""
+    dades = copy.deepcopy(dades_reals)
+    dades['horari'] = [_matriu_editor(solucio_real['solucio'])]
+    r = client.post('/api/validate-horari', json={'dades': dades, 'periode': 0})
+    assert r.status_code == 200, r.text
+    assert r.json()['valid'] is True, r.json()['incompliments']
+
+
+def test_validate_horari_detecta_incompliment(solucio_real, dades_reals):
+    """En reduir les hores d'una assignació per sota de les col·locades, la
+    validació ha de retornar un incompliment DUR d'hores per assignació."""
+    dades = copy.deepcopy(dades_reals)
+    dades['horari'] = [_matriu_de_solucio(solucio_real['solucio'])]
+    # Retalla les hores d'alguna assignació que tingui hores
+    for prof in dades['professors']:
+        for a in prof.get('moduls', []):
+            if a.get('hores', 0) >= 1:
+                a['hores'] = 0
+                break
+        else:
+            continue
+        break
+    r = client.post('/api/validate-horari', json={'dades': dades, 'periode': 0})
+    cos = r.json()
+    assert cos['valid'] is False
+    assert any(i['regla'] == 'hores' for i in cos['incompliments'])
+
+
+def test_preprocess_horari_format_editor(solucio_real, dades_reals):
+    """El preprocessador reconeix les cel·les del format editor (sense 'profe',
+    indexades per posició de professor) i no les descarta."""
+    dades = copy.deepcopy(dades_reals)
+    dades['horari'] = [_matriu_editor(solucio_real['solucio'])]
+    r = client.post('/api/preprocess', json={'dades': dades})
+    assert r.status_code == 200
+    fixat = r.json()['dades_processades']['horari_fixat']
+    assert len(fixat) > 0
+    for fix in fixat:
+        assert fix['professor'] >= 0
 
 
 def test_solve_fixacio_impossible(solucio_real, dades_reals):

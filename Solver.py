@@ -1680,6 +1680,125 @@ class HorariSolver:
         print(f"S'han fixat {fixades} hores pre-assignades")
         return fixades
 
+    def afegir_hints_horari(self):
+        """Sembra la cerca amb la graella d'entrada (horari_fixat) com a WARM START:
+        AddHint sobre les variables corresponents (no les fixa, només suggereix el
+        punt de partida). Amb una solució de partida completa i factible, CP-SAT la
+        fa servir com a primera incumbent, així que el resultat mai és pitjor.
+
+        Best-effort: si la cel·la té aula concreta i existeix variable, es fa el hint
+        exacte; si l'aula és -1 o no hi ha variable exacta, es fa el hint del primer
+        candidat del slot (mateix modul/professor/dia/hora/subgrup). Les cel·les sense
+        cap variable s'ignoren."""
+        vars_per_slot = {}
+        for (m, p, d, h, a, s), var in self.vars_assignacio.items():
+            vars_per_slot.setdefault((m, p, d, h, s), []).append(((m, p, d, h, a, s), var))
+
+        n = 0
+        for fix in self.horari_fixat:
+            m, p, s = fix['modul'], fix['professor'], fix['subgrup']
+            d, h, a = fix['dia'], fix['hora'], fix.get('aula', -1)
+
+            if a != -1 and (m, p, d, h, a, s) in self.vars_assignacio:
+                self.model.AddHint(self.vars_assignacio[(m, p, d, h, a, s)], 1)
+                n += 1
+            else:
+                candidates = vars_per_slot.get((m, p, d, h, s))
+                if candidates:
+                    self.model.AddHint(candidates[0][1], 1)
+                    n += 1
+
+        print(f"Warm start: {n} suggeriments (AddHint) sembrats des de la graella")
+        return n
+
+    def _cel_les_horari_sense_variable(self):
+        """Cel·les de la graella (horari_fixat) que NO tenen cap variable possible:
+        col·locacions il·legals en si mateixes (slot fora de l'horari disponible del
+        curs/mòdul, aula no permesa, grup sencer a aula petita, tarda...). Retorna una
+        llista de motius llegibles. Aquestes cel·les, per si soles, fan invàlid
+        l'horari (afegir_restriccions_horari_fixat les descartaria silenciosament)."""
+        slots_amb_var = set()
+        for (m, p, d, h, a, s) in self.vars_assignacio:
+            slots_amb_var.add((m, p, d, h, s))
+
+        motius = []
+        for fix in self.horari_fixat:
+            m, p, s = fix['modul'], fix['professor'], fix['subgrup']
+            d, h, a = fix['dia'], fix['hora'], fix.get('aula', -1)
+            te_var = ((a != -1 and (m, p, d, h, a, s) in self.vars_assignacio)
+                      or (m, p, d, h, s) in slots_amb_var)
+            if not te_var:
+                nom_p = self.professor_per_index.get(p, {}).get('nom', p)
+                nom_m = self.modul_per_index.get(m, {}).get('nom', m)
+                motius.append(f"{nom_p}: el mòdul «{nom_m}» no pot anar al dia {d + 1} "
+                              f"hora {h + 1} (slot o aula no permesos)")
+        return motius
+
+    def valida_horari(self, max_time_seconds: float = 30, num_workers: int = 8):
+        """FASE 1 de 'millorar horari': comprova que la graella d'entrada
+        (horari_fixat) satisfà TOTES les restriccions dures del model, SENSE les
+        exempcions de fixar_horari (validació estricta). Retorna (valid, motiu).
+
+        Dos nivells de comprovació:
+          1. Cel·les il·legals per si soles (cap variable possible) → invàlid directe.
+          2. Fixant la resta a ==1, es resol factibilitat: detecta conflictes ENTRE
+             cel·les (professor a dos llocs, ocupació d'aula/curs, descans 12 h,
+             regles de posició, desiderates dures...).
+
+        ⚠️ A diferència de fixar_horari, aquí self.fixar_horari es queda a False:
+        així les hores de la graella SÍ que es validen. explicar_infeasible=True
+        perquè, si xoquen, motiu_infeasible digui quins grups."""
+        self.explicar_infeasible = True
+        self.ignora_hores_grogues = False
+        self.fixar_horari = False           # validació estricta (sense exempcions)
+        self.crear_variables()
+        self.afegir_restriccions()
+
+        # Nivell 1: col·locacions impossibles per si soles
+        impossibles = self._cel_les_horari_sense_variable()
+        if impossibles:
+            return False, impossibles
+
+        # Nivell 2: conflictes entre cel·les (fixa-les a ==1 i resol factibilitat)
+        self.afegir_restriccions_horari_fixat()
+        solucio = self.resoldre(max_time_seconds=max_time_seconds,
+                                num_workers=num_workers, output_path=None)
+        if solucio is not None:
+            return True, []
+        return False, self.motiu_infeasible or []
+
+    def resol_grid_fixat(self, ignora_hores_grogues: bool = False, **kwargs):
+        """Resol el model amb la graella d'entrada FIXADA (cada cel·la ==1) i
+        retorna la solució que representa EXACTAMENT la proposta de partida, amb el
+        seu objectiu (`stats['objectiu']`). Serveix per obtenir l'objectiu de
+        referència: la millora (warm start) mai ha de retornar-ne un de pitjor.
+
+        Retorna None si la graella fixada resulta infactible dins del temps (p.ex.
+        una restricció global que el validador determinista no cobreix); en aquest
+        cas la garantia "mai pitjor" no s'aplica i es retorna la millora tal qual."""
+        self.explicar_infeasible = False
+        self.ignora_hores_grogues = ignora_hores_grogues
+        self.fixar_horari = False
+        self.crear_variables()
+        self.afegir_restriccions()
+        self.afegir_restriccions_horari_fixat()
+        return self.resoldre(output_path=None, **kwargs)
+
+    def millora(self, explicar_infeasible: bool = False,
+                ignora_hores_grogues: bool = False, **kwargs):
+        """FASE 2 de 'millorar horari': optimitza a partir de la graella d'entrada
+        com a warm start (AddHint). Mateix objectiu que executar(); les hores es
+        poden moure lliurement per rebaixar hores mortes/desiderates/aules. Cal haver
+        validat abans amb valida_horari() (aquesta fase assumeix que la graella és
+        factible; si no ho fos, el hint seria només una guia best-effort)."""
+        self.explicar_infeasible = explicar_infeasible
+        self.ignora_hores_grogues = ignora_hores_grogues
+        self.fixar_horari = False
+        self.crear_variables()
+        self.afegir_restriccions()
+        self.afegir_hints_horari()
+        return self.resoldre(**kwargs)
+
     def _explica_infactibilitat(self, solver_original, max_time_seconds: float, num_workers: int):
         """Calcula motiu_infeasible: el mínim de grups de restriccions a relaxar.
 

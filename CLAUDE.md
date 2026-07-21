@@ -15,9 +15,12 @@ restriccions i decisions/paranys coneguts.
   extracció de la solució). És el fitxer gran i on viu la lògica de resolució.
 - **`horari_solver.py`** — model de dades (`HorariData`): carrega/valida professors,
   cursos, mòduls, aules, especialitats, `projectes`, `horaris_projectes`.
+- **`validador_graella.py`** — validador EXHAUSTIU d'una graella (`valida_graella`): font
+  ÚNICA de veritat de la validació de propostes. ⚠️ Si l'afegeixes/mous, recorda copiar-lo
+  al `Dockerfile` (línia `COPY ... validador_graella.py ./`).
 - `exportar_html.py`, `switch2.py` — utilitats/exportació.
 - Docs: **`DOC_API_SOLVER.md`**, `API_REST.md`, `openapi.json`, `DESPLEGAMENT.md`,
-  `HORES_FIXADES.md`. Versió API actual: **1.8.0**.
+  `HORES_FIXADES.md`. Versió API actual: **1.10.0**.
   - `openapi.json` i `dades_solver_processades.json` són fitxers "daurats" verificats
     per tests: regenera'ls amb `scripts/exporta_openapi.py` i carregant
     `BuitRestriccions.json` a `HorariData().exporta_dades_processades(...)` quan canviïn
@@ -163,6 +166,36 @@ franges (compatibilitat amb dades antigues).
   **`GET /api/jobs/{id}/solucio`**: millor solució trobada fins ara en format compatible
   (`.hor`), descarregable mentre la feina encara corre. ⚠️ El càlcul de mètriques va dins
   un `try/except` a `resoldre` (i al callback): **mai** ha de tombar una resolució vàlida.
+
+## Validar i millorar una proposta (`millorar_horari`, API 1.10.0)
+
+- **Validació = font ÚNICA de veritat a `validador_graella.py`.** `valida_graella(dades_
+  processades, graella, hores_txt)` enumera TOTS els incompliments d'una graella (un període
+  del camp `horari` cru) amb missatges llegibles: `{regla, gravetat: dura|tova, missatge,
+  dia, hora}`. Opera sobre les **dades processades** (flags `es_tutoria`, `primera_ultima_
+  hora`, `restriccions.no_disponible/prefereix_no`, `aula_gran`, `subgrups`...), així queda
+  alineada amb el que el solver imposa. ⚠️ **Les regles de POSICIÓ es calculen sobre
+  l'ocupació del GRUP SENCER** (qualsevol subgrup), no per subgrup: tutoria mai a la
+  primera/última hora efectiva; mòduls `primera_ultima_hora` a un extrem (sense classe del
+  grup que no sigui el mòdul abans o després). Oracle de no-regressió: sobre una solució
+  òptima del propi solver (obj 0) ha de donar **0 durs**.
+- **Endpoint `POST /api/validate-horari`** → `{valid, total_durs, total_tous, incompliments,
+  regles}`. És instantani (no resol res). L'editor el pinta al validador.
+- **Porta de `millorar_horari` = la MATEIXA `valida_graella`** (a `_resol_solver`). Si hi ha
+  incompliments **durs** → `HORARI_INVALID` amb els motius exhaustius. Ja **no** es fa servir
+  la validació CP-SAT `valida_horari` com a porta (era lenta i menys granular; el mètode encara
+  hi és però no s'usa per gating).
+- **Garantia "mai pitjor"** (`Solver.resol_grid_fixat`). El *warm start* (`AddHint`) és
+  best-effort: amb temps curt CP-SAT pot retornar una solució PITJOR que la proposta. Per
+  evitar-ho, `_resol_solver` calcula l'objectiu de referència resolent la graella **fixada**
+  i, si la millora no el supera, retorna la **proposta original** + advertiment. Si la graella
+  fixada resulta infactible (rar; una global no coberta pel validador determinista), es retorna
+  la millora tal qual.
+- ⚠️ **Format editor al preprocessador.** `_carrega_horari_fixat`/`_afegeix_hora_fixada`
+  accepten la graella de l'editor (`[dia][hora]` = **llista indexada per l'índex del
+  professor**, cel·les SENSE camp `profe`): la POSICIÓ és el professor. Abans es llegia
+  `cella.get('profe')` i es descartaven TOTES les cel·les de l'editor (warm start buit). El
+  camp `profe`/`professor` explícit (format pla / `.hor`) segueix manant.
 
 ## Desenvolupament
 

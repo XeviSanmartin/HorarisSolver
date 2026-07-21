@@ -12,7 +12,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt uvicorn
 
-COPY horari_solver.py Solver.py exportar_html.py ./
+COPY horari_solver.py Solver.py exportar_html.py validador_graella.py ./
 COPY api/ api/
 
 # Barrera dura absoluta de temps (segons). L'app tria el temps real via

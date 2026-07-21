@@ -381,10 +381,15 @@ class HorariData:
             if not isinstance(dia, list):
                 continue
             for hora_idx, cella in enumerate(dia):
-                slots = cella if isinstance(cella, list) else [cella]
-                for slot in slots:
-                    if isinstance(slot, dict):
-                        self._afegeix_hora_fixada(dia_idx, hora_idx, slot)
+                # Format editor: cella és una llista indexada per professor (la
+                # POSICIÓ és l'índex del professor; les cel·les no porten 'profe').
+                # Format pla: cella és un únic dict que sí que porta 'profe'.
+                if isinstance(cella, list):
+                    for profe_pos, slot in enumerate(cella):
+                        if isinstance(slot, dict):
+                            self._afegeix_hora_fixada(dia_idx, hora_idx, slot, profe_defecte=profe_pos)
+                elif isinstance(cella, dict):
+                    self._afegeix_hora_fixada(dia_idx, hora_idx, cella)
 
         # Un professor no pot tenir dues hores fixades al mateix slot
         vists = set()
@@ -415,10 +420,13 @@ class HorariData:
         if self.horari_fixat:
             print(f"Carregades {len(self.horari_fixat)} hores pre-assignades (període {periode})")
 
-    def _afegeix_hora_fixada(self, dia: int, hora: int, cella: Dict):
-        """Valida una cel·la pre-assignada i, si és coherent, l'afegeix a horari_fixat"""
+    def _afegeix_hora_fixada(self, dia: int, hora: int, cella: Dict, profe_defecte: int = -1):
+        """Valida una cel·la pre-assignada i, si és coherent, l'afegeix a horari_fixat.
+
+        `profe_defecte` és l'índex de professor per posició (format editor, on la
+        cel·la no porta 'profe'); el camp 'profe'/'professor' de la cel·la mana."""
         avis = self.advertiments_horari_fixat.append
-        p_idx = cella.get('profe', cella.get('professor', -1))
+        p_idx = cella.get('profe', cella.get('professor', profe_defecte))
         m_idx = cella.get('modul', -1)
         subgrup = cella.get('subgrup', 3)
         aula = cella.get('aula', -1)
