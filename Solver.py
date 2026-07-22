@@ -1374,9 +1374,10 @@ class HorariSolver:
                 if not self.assig_es_suport.get((m, p, a, s), False):
                     continue
                 nom_prof = self.professor_per_index.get(p, {}).get('nom', p)
+                nom_mod = self.modul_per_index.get(m, {}).get('codi', m)
                 lit_suport = self._assumpcio(
-                    f"suport_p{p}",
-                    f"Suport de {nom_prof}: acompanya el titular del seu mòdul a la mateixa hora")
+                    f"suport_p{p}_m{m}",
+                    f"Suport de {nom_prof} [{nom_mod}]: acompanya el titular del seu mòdul a la mateixa hora")
                 titulars = titular_vars_mdh.get((m, d, h), [])
                 if titulars:
                     # Si el suport es col·loca aquí, el titular hi ha de ser també
@@ -2001,7 +2002,8 @@ class HorariSolver:
             d, h, a = fix['dia'], fix['hora'], fix.get('aula', -1)
 
             nom_prof = self.professor_per_index.get(p, {}).get('nom', p)
-            lit_fixat = self._assumpcio(f"fixat_p{p}", f"Hores fixades a mà de {nom_prof}")
+            nom_mod = self.modul_per_index.get(m, {}).get('codi', m)
+            lit_fixat = self._assumpcio(f"fixat_p{p}_m{m}", f"Hores fixades a mà de {nom_prof} [{nom_mod}]")
 
             if a != -1 and (m, p, d, h, a, s) in self.vars_assignacio:
                 c = self.model.Add(self.vars_assignacio[(m, p, d, h, a, s)] == 1)
