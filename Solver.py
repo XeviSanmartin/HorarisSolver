@@ -248,7 +248,6 @@ class HorariSolver:
             professor_idx = assignacio['professor']
             modul_idx = assignacio['modul']
             hores_requerides = assignacio['hores']
-            aula_preferida = assignacio['aula']
             subgrup = assignacio['subgrup']
 
             curs_idx = -1
@@ -267,10 +266,23 @@ class HorariSolver:
                 if modul.get('aules_possibles'):
                     aules_modul = set(modul['aules_possibles'])
 
-            # L'aula preferida de l'assignació ha de respectar el conjunt del mòdul;
-            # si no hi és, mana el conjunt (el preprocessador ja n'ha advertit)
-            if aula_preferida != -1 and aules_modul is not None and aula_preferida not in aules_modul:
-                aula_preferida = -1
+            # Aula preferida. Quan el mòdul té `aules_possibles` (cas flexible:
+            # l'aula és només una PREFERÈNCIA suava, penalitzable), es guia per
+            # l'aula del GRUP (curs.aula_principal) en lloc de la de
+            # l'assignació — així totes les hores d'un grup tendeixen a una
+            # única aula preferida, la seva. Quan NO en té (cas clàssic: l'hora
+            # es FIXA en aquesta aula, restricció dura), es manté l'aula de
+            # l'assignació tal com avui: als desdoblaments sense `aules_possibles`
+            # cada subgrup (A/B) sol estar fixat a una aula CONCRETA i diferent
+            # al mateix moment (p. ex. A a l'aula del grup, B a una de petita);
+            # substituir-ho per l'aula única del grup posaria els dos subgrups
+            # a la mateixa aula alhora → INFEASIBLE (comprovat amb dades reals).
+            if aules_modul is not None:
+                aula_preferida = self.curs_per_index.get(curs_idx, {}).get('aula_principal', -1)
+                if aula_preferida != -1 and aula_preferida not in aules_modul:
+                    aula_preferida = -1
+            else:
+                aula_preferida = assignacio['aula']
 
             # Si el grup necessita aula gran (per defecte), les seves classes de
             # grup sencer (subgrup 3) no poden anar a aules petites. Els grups
@@ -451,6 +463,176 @@ class HorariSolver:
                     self.model.AddBoolAnd([fm, ft]).OnlyEnforceIf(partit)
                     self.model.AddBoolOr([fm.Not(), ft.Not()]).OnlyEnforceIf(partit.Not())
                     penalitzacions.append(partit)
+        return penalitzacions
+
+    def _objectiu_evita_7_hores(self, dur=False):
+        """Objectiu 'evita 7 hores': només afecta professors amb el flag `7hores`
+        (els altres ja tenen un límit dur de 6h/dia, restricció 9, que no canvia).
+        Per cada dia amb 7 hores fetes, penalitza (o, amb `dur`, prohibeix del tot
+        arribar-hi, deixant el límit efectiu en 6 també per a aquests professors)."""
+        penalitzacions = []
+        for p_idx in self.professor_per_index:
+            prof = self.professor_per_index[p_idx]
+            if not prof.get('7hores', False):
+                continue  # ja limitat a 6h/dia per la restricció 9
+            for dia in range(self.dies):
+                hores_dia = [self.slots_ocupats_professor[(p_idx, dia, h)]
+                             for h in range(self.hores_per_dia)]
+                fa7 = self.model.NewBoolVar(f"fa7_p{p_idx}_d{dia}")
+                self.model.Add(sum(hores_dia) >= 7).OnlyEnforceIf(fa7)
+                self.model.Add(sum(hores_dia) <= 6).OnlyEnforceIf(fa7.Not())
+                if dur:
+                    self.model.Add(fa7 == 0)
+                else:
+                    penalitzacions.append(fa7)
+        return penalitzacions
+
+    def _objectiu_descans_minim(self, dur=True):
+        """Objectiu 'descans12h': descans mínim de 12 h entre l'última classe d'un
+        dia i la primera de l'endemà (durada de classe: 60 min). Amb `dur`, es
+        prohibeix qualsevol parella de classes en dies consecutius amb menys de
+        12h de separació (comportament clàssic, per defecte). En tou, cada parella
+        que incompleix el mínim es penalitza en comptes de prohibir-se. Les
+        parelles on totes dues hores són manuals (fixades) queden exemptes."""
+        DURADA_CLASSE_MIN = 60
+        DESCANS_MINIM_MIN = 12 * 60
+        penalitzacions = []
+        for p_idx in self.professor_per_index:
+            nom_prof = self.professor_per_index[p_idx].get('nom', p_idx)
+            lit_descans = self._assumpcio(
+                f"descans_p{p_idx}",
+                f"Descans de 12 h de {nom_prof} entre l'última classe d'un dia "
+                f"i la primera de l'endemà") if dur else None
+            for dia in range(1, self.dies):
+                for h_prev in range(self.hores_per_dia):
+                    fi_prev = self.hores_inici_min[h_prev] + DURADA_CLASSE_MIN
+                    for h_next in range(self.hores_per_dia):
+                        descans = (1440 - fi_prev) + self.hores_inici_min[h_next]
+                        if descans >= DESCANS_MINIM_MIN:
+                            continue
+                        if (self._es_fixat(p_idx, dia - 1, h_prev) and
+                                self._es_fixat(p_idx, dia, h_next)):
+                            continue
+                        ocupat_prev = self.slots_ocupats_professor[(p_idx, dia - 1, h_prev)]
+                        ocupat_next = self.slots_ocupats_professor[(p_idx, dia, h_next)]
+                        if dur:
+                            c = self.model.Add(ocupat_prev + ocupat_next <= 1)
+                            if lit_descans is not None:
+                                c.OnlyEnforceIf(lit_descans)
+                        else:
+                            viol = self.model.NewBoolVar(
+                                f"descans_viol_p{p_idx}_d{dia}_h{h_prev}_h{h_next}")
+                            self.model.Add(ocupat_prev + ocupat_next <= 1).OnlyEnforceIf(viol.Not())
+                            self.model.Add(ocupat_prev + ocupat_next == 2).OnlyEnforceIf(viol)
+                            penalitzacions.append(viol)
+        return penalitzacions
+
+    def _te_classe_dia(self, p_idx):
+        """Booleans (un per dia) que indiquen si el professor `p_idx` té alguna
+        classe de PRESÈNCIA (validaAssistencia) aquell dia. Reutilitzat per les
+        regles de professor controlable (`controlableCadaDia`)."""
+        te_classe_dia = []
+        for dia in range(self.dies):
+            classes_dia = self._vars_presencia_per_prof_dia.get((p_idx, dia), [])
+            te_classe = self.model.NewBoolVar(f"te_classe_p{p_idx}_d{dia}")
+            if classes_dia:
+                self.model.Add(sum(classes_dia) >= 1).OnlyEnforceIf(te_classe)
+                self.model.Add(sum(classes_dia) == 0).OnlyEnforceIf(te_classe.Not())
+            else:
+                self.model.Add(te_classe == 0)
+            te_classe_dia.append(te_classe)
+        return te_classe_dia
+
+    def _objectiu_controlable_cada_dia(self, dur=True):
+        """Objectiu 'controlableCadaDia': els professors controlables (flag
+        `controlable`, sense `lliureRestriccions`) tenen classe cada dia; amb el
+        flag `DiesLliures`, com a màxim poden faltar 1 dia entre dimarts i dijous.
+        Amb `dur`, s'imposa (comportament clàssic, per defecte); en tou, penalitza
+        cada dia que falta respecte del mínim exigit."""
+        penalitzacions = []
+        for p_idx in self.professor_per_index:
+            prof = self.professor_per_index[p_idx]
+            if not prof.get('controlable', False) or prof.get('lliureRestriccions', False):
+                continue
+
+            te_classe_dia = self._te_classe_dia(p_idx)
+            lit_dies = self._assumpcio(
+                f"diescontrolable_p{p_idx}",
+                f"Classe cada dia de {prof.get('nom', p_idx)} (professor controlable)") if dur else None
+
+            if prof.get('DiesLliures', False):
+                dies_intermedis = te_classe_dia[1:4] if self.dies >= 5 else te_classe_dia[1:self.dies]
+                if dies_intermedis:
+                    if dur:
+                        c = self.model.Add(sum(dies_intermedis) >= len(dies_intermedis) - 1)
+                        if lit_dies is not None:
+                            c.OnlyEnforceIf(lit_dies)
+                    else:
+                        falten = self.model.NewIntVar(0, len(dies_intermedis), f"falten_p{p_idx}")
+                        self.model.Add(falten >= (len(dies_intermedis) - 1) - sum(dies_intermedis))
+                        penalitzacions.append(falten)
+            else:
+                for dia in range(self.dies):
+                    if dur:
+                        c = self.model.Add(te_classe_dia[dia] == 1)
+                        if lit_dies is not None:
+                            c.OnlyEnforceIf(lit_dies)
+                    else:
+                        manca = self.model.NewBoolVar(f"manca_classe_p{p_idx}_d{dia}")
+                        self.model.Add(te_classe_dia[dia] == 0).OnlyEnforceIf(manca)
+                        self.model.Add(te_classe_dia[dia] == 1).OnlyEnforceIf(manca.Not())
+                        penalitzacions.append(manca)
+        return penalitzacions
+
+    def _objectiu_controlable_dilvend(self, dur=True):
+        """Objectiu 'controlableDilVend': els professors controlables (mateix
+        filtre que `controlableCadaDia`) han de tenir classe de PRESÈNCIA dilluns
+        AL MATÍ i/o divendres A LA TARDA (frontera `hora_inici_tarda`) — n'hi ha
+        prou amb una de les dues. Amb `dur`, s'imposa; en tou, penalitza quan cap
+        de les dues es compleix. Substitueix la regla clàssica (dilluns I
+        divendres, qualsevol hora, totes dues obligatòries)."""
+        tarda = self.config.get('hora_inici_tarda', 6)
+        penalitzacions = []
+        for p_idx in self.professor_per_index:
+            prof = self.professor_per_index[p_idx]
+            if not prof.get('controlable', False) or prof.get('lliureRestriccions', False):
+                continue
+
+            def _vars_presencia(dia, filtre_hora):
+                return [var for (m, p, d, h, a, s), var in self.vars_assignacio.items()
+                        if p == p_idx and d == dia and filtre_hora(h)
+                        and self.modul_per_index.get(m, {}).get('validaAssistencia', True) is not False]
+
+            vars_dl_mati = _vars_presencia(0, lambda h: h < tarda)
+            vars_dv_tarda = _vars_presencia(4, lambda h: h >= tarda) if self.dies >= 5 else []
+
+            fm = self.model.NewBoolVar(f"dlmati_p{p_idx}")
+            if vars_dl_mati:
+                self.model.Add(sum(vars_dl_mati) >= 1).OnlyEnforceIf(fm)
+                self.model.Add(sum(vars_dl_mati) == 0).OnlyEnforceIf(fm.Not())
+            else:
+                self.model.Add(fm == 0)
+
+            fv = self.model.NewBoolVar(f"dvtarda_p{p_idx}")
+            if vars_dv_tarda:
+                self.model.Add(sum(vars_dv_tarda) >= 1).OnlyEnforceIf(fv)
+                self.model.Add(sum(vars_dv_tarda) == 0).OnlyEnforceIf(fv.Not())
+            else:
+                self.model.Add(fv == 0)
+
+            if dur:
+                lit = self._assumpcio(
+                    f"dilvend_p{p_idx}",
+                    f"Classe de {prof.get('nom', p_idx)} dilluns matí i/o divendres tarda "
+                    f"(professor controlable)")
+                c = self.model.Add(fm + fv >= 1)
+                if lit is not None:
+                    c.OnlyEnforceIf(lit)
+            else:
+                manca = self.model.NewBoolVar(f"manca_dilvend_p{p_idx}")
+                self.model.Add(fm + fv == 0).OnlyEnforceIf(manca)
+                self.model.Add(fm + fv >= 1).OnlyEnforceIf(manca.Not())
+                penalitzacions.append(manca)
         return penalitzacions
 
     def afegir_restriccions(self):
@@ -1071,109 +1253,26 @@ class HorariSolver:
                         c.OnlyEnforceIf(lit)
 
         # 10. Restricció: descans mínim de 12 h entre l'última classe d'un dia i
-        # la primera de l'endemà. Es prohibeix qualsevol parella de classes en
-        # dies consecutius amb menys de 12 h de separació (durada de classe: 60
-        # min). Les parelles on totes dues hores són manuals (fixades) queden
-        # exemptes: les hores fixades no es validen entre elles.
-        DURADA_CLASSE_MIN = 60
-        DESCANS_MINIM_MIN = 12 * 60
-        for p_idx in self.professor_per_index:
-            nom_prof = self.professor_per_index[p_idx].get('nom', p_idx)
-            lit_descans = self._assumpcio(
-                f"descans_p{p_idx}",
-                f"Descans de 12 h de {nom_prof} entre l'última classe d'un dia "
-                f"i la primera de l'endemà")
-            for dia in range(1, self.dies):
-                for h_prev in range(self.hores_per_dia):
-                    fi_prev = self.hores_inici_min[h_prev] + DURADA_CLASSE_MIN
-                    for h_next in range(self.hores_per_dia):
-                        descans = (1440 - fi_prev) + self.hores_inici_min[h_next]
-                        if descans >= DESCANS_MINIM_MIN:
-                            continue
-                        if (self._es_fixat(p_idx, dia - 1, h_prev) and
-                                self._es_fixat(p_idx, dia, h_next)):
-                            continue
-                        c = self.model.Add(
-                            self.slots_ocupats_professor[(p_idx, dia - 1, h_prev)] +
-                            self.slots_ocupats_professor[(p_idx, dia, h_next)] <= 1)
-                        if lit_descans is not None:
-                            c.OnlyEnforceIf(lit_descans)
-        
-        
+        # la primera de l'endemà. Objectiu configurable `descans12h` (vegeu
+        # `_objectiu_descans_minim`, cridat des del bloc d'assemblat de la
+        # funció objectiu, més avall): pes 100 = dur (comportament clàssic,
+        # per defecte), 1-99 = penalització tova, 0 = s'ignora.
 
-        
-        # 12. Restricció: Un professor no pot tenir lliure ni dilluns ni divendres
-        #
-        # Presència diària per a la regla de dies lliures: alguns mòduls (p. ex.
-        # reunions) tenen horari setmanal però NO es fan cada setmana, de manera
-        # que no han de comptar per decidir si un professor "fa presència" un dia.
-        # Es marquen amb validaAssistencia=False al mòdul. Aquí es construeix la
-        # presència sumant NOMÉS les variables d'assignació de mòduls que compten.
-        # (No es toca slots_ocupats_professor: el professor hi segueix ocupat per a
-        # la resta de restriccions, com "no estar en dos llocs alhora".)
-        vars_presencia_per_prof_dia = {}  # (p_idx, dia) -> [vars]
+        # Presència diària per a les regles de professor controlable (`_te_classe_dia`,
+        # `_objectiu_controlable_cada_dia`, `_objectiu_controlable_dilvend`, més avall):
+        # alguns mòduls (p. ex. reunions) tenen horari setmanal però NO es fan cada
+        # setmana, de manera que no han de comptar per decidir si un professor "fa
+        # presència" un dia. Es marquen amb validaAssistencia=False al mòdul. Aquí es
+        # construeix la presència sumant NOMÉS les variables d'assignació de mòduls
+        # que compten. (No es toca slots_ocupats_professor: el professor hi segueix
+        # ocupat per a la resta de restriccions, com "no estar en dos llocs alhora".)
+        self._vars_presencia_per_prof_dia = {}  # (p_idx, dia) -> [vars]
         for (m, p, d, h, a, s), var in self.vars_assignacio.items():
             modul = self.modul_per_index.get(m)
             if modul is not None and modul.get('validaAssistencia', True) is False:
                 continue
-            vars_presencia_per_prof_dia.setdefault((p, d), []).append(var)
+            self._vars_presencia_per_prof_dia.setdefault((p, d), []).append(var)
 
-        for p_idx in self.professor_per_index:
-            prof = self.professor_per_index[p_idx]
-            # Els professors "lliures de restriccions" no tenen l'exigència de
-            # classe dilluns/divendres i poden tenir diversos dies lliures.
-            if not prof.get('controlable', False) or prof.get('lliureRestriccions', False):
-                continue
-
-            te_classe_dia = []
-            for dia in range(self.dies):
-                # Classes que compten com a presència aquest dia (exclou els mòduls
-                # amb validaAssistencia=False, p. ex. reunions).
-                classes_dia = vars_presencia_per_prof_dia.get((p_idx, dia), [])
-
-                # Variable que indica si el profesor tiene al menos una clase este día
-                var_name = f"te_classe_p{p_idx}_d{dia}"
-                te_classe = self.model.NewBoolVar(var_name)
-                if classes_dia:
-                    self.model.Add(sum(classes_dia) >= 1).OnlyEnforceIf(te_classe)
-                    self.model.Add(sum(classes_dia) == 0).OnlyEnforceIf(te_classe.Not())
-                else:
-                    # Cap mòdul que compti aquest dia → mai fa presència.
-                    self.model.Add(te_classe == 0)
-                te_classe_dia.append(te_classe)
-            
-            lit_dies = self._assumpcio(
-                f"dies_p{p_idx}",
-                f"Règim de dies de {self.professor_per_index[p_idx].get('nom', p_idx)} "
-                f"(classe dilluns i divendres, dies lliures)")
-
-            def _amb_lit_dies(c):
-                if lit_dies is not None:
-                    c.OnlyEnforceIf(lit_dies)
-
-            # Todos deben tener clase lunes y viernes
-            _amb_lit_dies(self.model.Add(te_classe_dia[0] == 1))  # Lunes (día 0)
-            if self.dies >= 5:
-                _amb_lit_dies(self.model.Add(te_classe_dia[4] == 1))  # Viernes (día 4)
-
-            # Solo aplicar restricción de días libres a profesores que pueden tenerlos
-            if self.professor_per_index[p_idx].get('DiesLliures', False):
-                # Días intermedios (martes a jueves) - simplemente contar cuántos días tienen clase
-                dies_intermedis = te_classe_dia[1:4] if self.dies >= 5 else te_classe_dia[1:self.dies]
-
-                if dies_intermedis:
-                    # Al menos deben tener clase 2 de los 3 días intermedios (máximo 1 día libre)
-                    _amb_lit_dies(self.model.Add(sum(dies_intermedis) >= len(dies_intermedis) - 1))
-
-                    nom_professor = self.professor_per_index[p_idx]['nom']
-                    print(f"  {nom_professor} puede tener como máximo 1 día libre entre martes y jueves")
-            else:
-                # Si no tiene DiesLliures, debe tener clase todos los días
-                for dia in range(self.dies):
-                    _amb_lit_dies(self.model.Add(te_classe_dia[dia] == 1))
-
-
-        
         # 11. Restricció: Subgrup 1 + grup sencer <= 4 hores, i subgrup 2 + grup sencer <= 4 hores
         for p_idx in self.professor_per_index:
             for c_idx in self.curs_per_index:
@@ -1529,6 +1628,10 @@ class HorariSolver:
         w_aula = self._pes_objectiu('aulaPreferida', 1)
         w_desd = self._pes_objectiu('desdoblamentMateixDia', 0)
         w_mati = self._pes_objectiu('matiOTarda', 0)
+        w_evita7 = self._pes_objectiu('evita7Hores', 0)
+        w_descans = self._pes_objectiu('descans12h', 100)
+        w_ctrl_dia = self._pes_objectiu('controlableCadaDia', 100)
+        w_ctrl_dilvend = self._pes_objectiu('controlableDilVend', 100)
 
         termes = []      # expressions dels objectius tous (pes × penalització)
         resum = []
@@ -1581,6 +1684,42 @@ class HorariSolver:
                 resum.append(f"{w_mati}*mati_o_tarda")
             elif w_mati >= 100:
                 resum.append("matí o tarda (dur)")
+
+        # Evita 7 hores diàries (només professors amb el flag '7hores')
+        if w_evita7 > 0:
+            pen_evita7 = self._objectiu_evita_7_hores(dur=(w_evita7 >= 100))
+            if 0 < w_evita7 < 100 and pen_evita7:
+                termes.append(sum(pen_evita7) * w_evita7)
+                resum.append(f"{w_evita7}*evita_7_hores")
+            elif w_evita7 >= 100:
+                resum.append("evita 7 hores (dur)")
+
+        # Descans mínim de 12h entre l'última classe d'un dia i la primera de l'endemà
+        if w_descans > 0:
+            pen_descans = self._objectiu_descans_minim(dur=(w_descans >= 100))
+            if 0 < w_descans < 100 and pen_descans:
+                termes.append(sum(pen_descans) * w_descans)
+                resum.append(f"{w_descans}*descans_12h")
+            elif w_descans >= 100:
+                resum.append("descans 12h (dur)")
+
+        # Professors controlables: classe cada dia
+        if w_ctrl_dia > 0:
+            pen_ctrl_dia = self._objectiu_controlable_cada_dia(dur=(w_ctrl_dia >= 100))
+            if 0 < w_ctrl_dia < 100 and pen_ctrl_dia:
+                termes.append(sum(pen_ctrl_dia) * w_ctrl_dia)
+                resum.append(f"{w_ctrl_dia}*controlable_cada_dia")
+            elif w_ctrl_dia >= 100:
+                resum.append("controlable cada dia (dur)")
+
+        # Professors controlables: dilluns matí i/o divendres tarda
+        if w_ctrl_dilvend > 0:
+            pen_ctrl_dilvend = self._objectiu_controlable_dilvend(dur=(w_ctrl_dilvend >= 100))
+            if 0 < w_ctrl_dilvend < 100 and pen_ctrl_dilvend:
+                termes.append(sum(pen_ctrl_dilvend) * w_ctrl_dilvend)
+                resum.append(f"{w_ctrl_dilvend}*controlable_dilvend")
+            elif w_ctrl_dilvend >= 100:
+                resum.append("controlable dilluns/divendres (dur)")
 
         if termes:
             self.model.Minimize(sum(termes))

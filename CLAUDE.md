@@ -221,8 +221,9 @@ forats per curs/subgrup, posició FOL/tutoria, descans 12 h, dies lliures...). I
   Helper `_pes_objectiu(clau, defecte)`: **0** = ignora, **100** = restricció DURA,
   **1-99** = penalització tova. Objectius: `horesMortes`, `horesVermelles`
   (no disponibles), `horesGrogues` (prefereix no), `aulaPreferida`,
-  `desdoblamentMateixDia` i `matiOTarda`. Els defaults reprodueixen el clàssic
-  (`10/·/20/1`, vermelles dures a 100).
+  `desdoblamentMateixDia`, `matiOTarda`, `evita7Hores`, `descans12h`,
+  `controlableCadaDia` i `controlableDilVend`. Els defaults reprodueixen el clàssic
+  (`10/·/20/1`, vermelles/descans/controlables dures a 100).
 - ⚠️ **`horesVermelles` (no disponibles) ara és configurable**: la constraint 7 és
   dura només amb pes 100 (per defecte); amb 1-99 penalitza suau (vars a
   `self._pen_vermelles`), amb 0 s'ignora. Es llegeix a l'inici d'`afegir_restriccions`
@@ -237,6 +238,26 @@ forats per curs/subgrup, posició FOL/tutoria, descans 12 h, dies lliures...). I
   `_objectiu_mati_o_tarda` — que un professor no vingui matí I tarda el mateix dia;
   només compten les hores de **presència**, `validaAssistencia`; frontera
   `hora_inici_tarda`). Amb pes 100 s'imposen com a restricció dura.
+- **4 objectius més nous (ex-restriccions dures incondicionals, ara `_pes_objectiu`-gated)**:
+  - `evita7Hores` (per defecte **0**, sense canvi de comportament): NOMÉS afecta professors
+    amb el flag `7hores` (els altres ja tenen el límit físic dur de 6h/dia — restricció 9,
+    intacta). `_objectiu_evita_7_hores`: penalitza (o amb pes 100, prohibeix) arribar a les
+    7 hores un dia, deixant-los de facto a 6 com la resta si es posa dur.
+  - `descans12h` (per defecte **100**, reprodueix l'antiga restricció 10, sempre dura):
+    descans mínim de 12h entre l'última classe d'un dia i la primera de l'endemà.
+    `_objectiu_descans_minim(dur)`.
+  - `controlableCadaDia` (per defecte **100**, reprodueix la part "cada dia" de l'antiga
+    restricció 12): professors `controlable=True` (sense `lliureRestriccions`) amb classe
+    cada dia (o com a màxim 1 dia lliure entre dt-dj amb `DiesLliures`). `_te_classe_dia`
+    (helper compartit) + `_objectiu_controlable_cada_dia(dur)`.
+  - `controlableDilVend` (per defecte **100**, però **SUBSTITUEIX** la regla clàssica):
+    abans exigia dilluns I divendres, QUALSEVOL hora, tots dos obligatoris; ara exigeix
+    **dilluns AL MATÍ i/o divendres A LA TARDA** (frontera `hora_inici_tarda`), n'hi ha
+    prou amb una de les dues. `_objectiu_controlable_dilvend(dur)`. Canvi de comportament
+    deliberat (demanat explícitament), no un bug.
+  - Cap dels quatre es valida a `validador_graella.py` (vegeu nota de "mai pitjor" més avall,
+    ja documentava aquest buit per a `descans12h`/`controlable*`; `evita7Hores` tampoc perquè
+    el `max_diari` que sí es valida és el límit físic 6/7, no tocat).
 - ⚠️ **`validaAssistencia`** ara es propaga de debò (Modul dataclass + `carrega_dades`
   + `genera_dades_processades`); abans no arribava a les dades processades i el solver
   sempre el llegia com a True (la regla de dies lliures no l'aplicava).
@@ -249,6 +270,29 @@ forats per curs/subgrup, posició FOL/tutoria, descans 12 h, dies lliures...). I
   - ⚠️ La validació determinista (`valida_graella`) **no** cobreix el descans de 12 h ni
     la regla de professor controlable dll/div; una graella que passa el validador pot
     ser INFEASIBLE en fixar-la estrictament (llavors la referència no s'obté).
+
+## Aula preferida: del grup, NOMÉS quan és una preferència tova
+
+- ⚠️ **Provat i corregit**: fer que `crear_variables` ignorés SEMPRE `assignacio['aula']`
+  a favor de `curs.aula_principal` trencava l'horari real (`Solver.json`): als desdoblaments
+  d'avui, cada subgrup (1/2) sol estar FIXAT a una aula concreta i diferent (sense
+  `aules_possibles`) — p. ex. subgrup A a l'aula del grup, subgrup B a una de petita, a la
+  MATEIXA hora. Forçar-los tots dos a l'aula única del grup els posava a la mateixa aula
+  alhora → INFEASIBLE (confirmat resolent les dades reals abans/després del canvi).
+- Per això el canvi és **condicionat al cas flexible**: `crear_variables` només fa servir
+  **`curs.aula_principal`** (el camp `aula` de cada curs a l'editor, `edicioDades.vue:1083`;
+  el preprocessador el renombra a `aula_principal` a `horari_solver.py`) com a font de
+  l'aula preferida quan el mòdul **té `aules_possibles`** (l'aula ja és una preferència
+  suau, penalitzable amb `aulaPreferida`, no una restricció dura). Quan el mòdul **no** en
+  té (cas clàssic: l'hora es fixa dura en aquesta aula), es manté `assignacio['aula']` tal
+  com sempre — necessari perquè els desdoblaments sense `aules_possibles` puguin fixar
+  cada subgrup a una aula diferent i simultània.
+  - Efecte pràctic amb les dades d'avui: gairebé nul, perquè `aules_possibles` gairebé no
+    s'usa encara als mòduls reals. Queda preparat perquè, quan es facin servir
+    `aules_possibles` (p. ex. futurs desdoblaments flexibles), la preferència suau apunti
+    a l'aula del grup en lloc de la triada per aquell subgrup concret a l'editor.
+  - El camp `aula` de cada assignació es manté intacte per a tota la resta (identitat de
+    l'assignació, `assig_es_suport`/`_flags_assignacio`, sortida de la solució).
 
 ## Desenvolupament
 
