@@ -20,7 +20,7 @@ restriccions i decisions/paranys coneguts.
   al `Dockerfile` (línia `COPY ... validador_graella.py ./`).
 - `exportar_html.py`, `switch2.py` — utilitats/exportació.
 - Docs: **`DOC_API_SOLVER.md`**, `API_REST.md`, `openapi.json`, `DESPLEGAMENT.md`,
-  `HORES_FIXADES.md`. Versió API actual: **1.10.0**.
+  `HORES_FIXADES.md`. Versió API actual: **1.11.0**.
   - `openapi.json` i `dades_solver_processades.json` són fitxers "daurats" verificats
     per tests: regenera'ls amb `scripts/exporta_openapi.py` i carregant
     `BuitRestriccions.json` a `HorariData().exporta_dades_processades(...)` quan canviïn
@@ -310,8 +310,10 @@ forats per curs/subgrup, posició FOL/tutoria, descans 12 h, dies lliures...). I
   `restart: unless-stopped`.
 - **Proxmox VM**: mateixa comanda; l'API a `http://<ip-vm>:8000`.
 - L'editor s'hi connecta posant la URL a **vista Solver → Execució del solver**.
-- Config per variables d'entorn a `docker-compose.yml`: `MAX_TEMPS_SOLVER` (defecte 7200s),
-  `CORS_ORIGINS` (defecte `*`). Un sol procés (les feines async viuen en memòria).
+- Config per variables d'entorn a `docker-compose.yml`: `MAX_TEMPS_SOLVER` (al
+  `docker-compose.yml` és `259200` = 3 dies com a backstop; si no s'especifica la variable,
+  el default del codi és `280`s), `CORS_ORIGINS` (defecte `*`). Un sol procés (les feines
+  async viuen en memòria).
 
 ## Git
 
